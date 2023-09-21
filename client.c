@@ -129,7 +129,7 @@ int main()
     struct msg_buffer message;
 
     // Generate key for the message queue
-    while ((key = ftok("key.md", 'B')) == -1)
+    while ((key = ftok("README.md", 'B')) == -1)
     {
         printf("Error while generating key of the file");
         exit(-1);

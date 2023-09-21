@@ -128,7 +128,7 @@ int main()
     struct msg_buffer msg;
 
     // Link it with a key which lets you use the same key to communicate from both sides
-    if ((key = ftok("key.md", 'B')) == -1)
+    if ((key = ftok("README.md", 'B')) == -1)
     {
         perror("Error while generating key of the file");
         exit(-1);
