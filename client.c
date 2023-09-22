@@ -17,6 +17,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <string.h>
+#include <sys/wait.h>
 
 #define MESSAGE_LENGTH 100
 
@@ -26,8 +27,8 @@
  */
 struct data
 {
-    int operation;
     char message[MESSAGE_LENGTH];
+    char operation;
 };
 
 struct msg_buffer
@@ -47,7 +48,7 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 {
     printf("[Client] Sending message to the Ping Server...\n");
     msg_buf.data.message[0] = 'H';
-    msg_buf.data.message[1] = 'i';
+    msg_buf.data.message[1] = 'f';
     msg_buf.data.message[2] = '\0';
 
     msg_buf.msg_type = client_id;
@@ -55,32 +56,33 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 
     if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
     {
-        printf("[Client] Message could not be sent, please try again");
+        printf("[Client] Message could not be sent, please try again\n");
+        exit(EXIT_FAILURE);
     }
     else
     {
-        printf("Hello World.");
-
         while (1)
         {
             if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1)
             {
-                printf("[Client] Error while receiving message from the Ping Server");
-            }
-
-            printf("[Client] Message received from the Ping Server %ld: %s\n", msg_buf.msg_type, msg_buf.data.message);
-
-            if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
-            {
-                printf("[Client] Message received from the Ping Server: %s\n", msg_buf.data.message);
-                return;
+                printf("[Client] Error while receiving message from the Ping Server\n");
             }
             else
             {
-                // push the message back to the queue
-                if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1)
+                printf("[Client] Message recieved from the Ping Server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
+
+                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
                 {
-                    printf("[Client] Message could not be sent, please try again");
+                    printf("[Client] Message received from the Ping Server: %s\n", msg_buf.data.message);
+                    return;
+                }
+                else
+                {
+                    // push the message back to the queue
+                    if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1)
+                    {
+                        printf("[Client] Message could not be sent, please try again\n");
+                    }
                 }
             }
         }
@@ -132,14 +134,14 @@ int main()
     while ((key = ftok("README.md", 'B')) == -1)
     {
         printf("Error while generating key of the file");
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 
     // Connect to the messsage queue
     while ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1)
     {
         printf("Error while connecting with Message Queue");
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 
     printf("Successfully connected to the Message Queue %d %d\n", key, msg_queue_id);
@@ -181,13 +183,6 @@ int main()
         {
             printf("Invalid Input. Please try again.\n");
         }
-    }
-
-    // Destroy the message queue
-    if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
-    {
-        printf("Error while destroying the message queue");
-        exit(-4);
     }
 
     return 0;

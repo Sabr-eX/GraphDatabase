@@ -15,15 +15,15 @@ i.e., if the executable file corresponding to client.c is client.out, then each 
 client.out is executed on a separate terminal, a separate client process is
 created.
 
-b) When a client process is run, it will ask the user to enter a positive integer as its
+[DONE] b) When a client process is run, it will ask the user to enter a positive integer as its
 client-id. The prompt message will look like this.
-Enter Client-ID:
+`Enter Client-ID:`
 If you are running four instances of client.out, then for the first instance, the user
 should enter client-id as 1, for the second instance, the user should enter client-id
 as 2 and so on. Out of the total clients running, who will get what id, can be
 decided randomly.
 
-c) Then, each client will display a menu to the user (no GUI or beautification is
+[DONE] c) Then, each client will display a menu to the user (no GUI or beautification is
 required):
 
 ```
@@ -37,12 +37,12 @@ For menu option 1, the client will not ask the user to enter any input. For each
 menu options 2 and 3, the client will ask for a filename from the user. Assume the
 files to be ASCII (text only) files.
 
-d) Upon receiving a command from the user (using the above menu), the client will
+[DONE] d) Upon receiving a command from the user (using the above menu), the client will
 communicate the command and the necessary argument(s) (if required) to the
 main server (described later). This communication with the main server should
 take place only using a message queue.
 
-e) There can be any number of client processes communicating with the main
+[DONE] e) There can be any number of client processes communicating with the main
 server. All communications between all the clients and the main server (or the
 main server’s children) (both ways, i.e., from client to main server and from
 server’s child to client) need to be done through the single message queue
@@ -58,10 +58,10 @@ terminate.
 
 ### Write a POSIX-compliant C program server.c (let’s call this the main server).
 
-a) The main server is responsible for creating the message queue to be used for
+[DONE] a) The main server is responsible for creating the message queue to be used for
 communication with the clients.
 
-b) The main server will listen to the message queue for new requests from the
+[DONE] b) The main server will listen to the message queue for new requests from the
 clients.
 
 c) Upon receipt of a request from a client, the main server will spawn a child server
@@ -123,61 +123,3 @@ more requests.
    communications which are specified to be done using the single message queue, should
    be done using the message queue only and no other IPC mechanism should be used in
    those cases.
-
-### SUBMISSION GUIDELINES:
-
--   All programs should be POSIX compliant C programs.
--   All codes should run on Ubuntu 22.04 systems.
--   Submissions are to be done on the CMS course page under the Assignment
-    section.
--   There should be only submission per group.
--   Each group should submit a zipped file containing all the relevant C programs and
-    a text file containing the correct names and IDs of all the group members. The
-    names and IDs should be written in uppercase letters only. The zipped file should
-    be named as GroupX_A1 (X stands for the group number). You will be notified of
-    your group number after a few days.
--   Your group composition has been frozen now. You cannot add or drop any group
-    member now.
-
-### PLAGIARISM POLICY:
-
--   All submissions will be checked for plagiarism.
--   Lifting code/code snippets from the Internet is plagiarism. Taking and submitting
-    the code of another group(s) is also plagiarism. However, plagiarism does not
-    imply discussions and exchange of thoughts and ideas (not code).
--   All cases of plagiarism will result in awarding a hefty penalty. Groups found guilty
-    of plagiarism may be summarily awarded zero also.
--   All groups found involved in plagiarism, directly or indirectly will be penalized.
--   The entire group will be penalized irrespective of the number of group members
-    involved in code exchange and consequently plagiarism. So, each member should
-    ensure proper group coordination.
--   The course team will not be responsible for any kind of intellectual property theft.
-    So, if anyone is lifting your code from your laptop, that is completely your
-    responsibility. Please remember that it is not the duty of the course team to
-    investigate cases of plagiarism and figure out who is guilty and who is innocent.
--   Please be careful about sharing code among your group members via any online
-    code repositories. Be careful about the permission levels (like public or private).
-    Intellectual property theft may also happen via publicly shared repositories.
-    DEMO GUIDELINES:
--   The assignment also consists of a demo component to evaluate each student’s
-    effort and level of understanding of the implementation and the associated
-    concepts.
--   The demos will be conducted in either the I-block labs or D-block labs. Therefore,
-    the codes will be tested on the lab machines.
--   No group will be allowed to give the demo on their own laptop.
--   The codes should run on Ubuntu 22.04.
--   All group members should be present during the demo.
--   Any absent group member will be awarded zero.
--   The demos will be conducted in person.
--   The demos will not be rescheduled.
--   Though this is a group assignment, each group member should have full
-    knowledge of the complete implementation. During the demo, questions may be
-    asked from any aspect of the assignment.
--   Demo slots will be made available in the last week of September. You need to book
-    your demo slots as per the availability of your entire group.
--   The code submitted on CMS will be used for the demo.
--   Each group member will be evaluated based on the overall understanding and
-    effort. A group assignment does not imply that each and every member of a group
-    will be awarded the same marks.
--   Any form of heckling and/or bargaining for marks with the evaluators will not be
-    tolerated during the demo.

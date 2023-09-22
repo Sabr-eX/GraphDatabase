@@ -17,13 +17,14 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <string.h>
+#include <sys/wait.h>
 
 #define MESSAGE_LENGTH 100
 
 struct data
 {
-    int operation;
     char message[MESSAGE_LENGTH];
+    char operation;
 };
 
 struct msg_buffer
@@ -82,6 +83,7 @@ void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
     else
     {
         // Parent Process
+        wait(NULL);
     }
 }
 
@@ -151,24 +153,35 @@ int main()
             perror("Error while receiving message from the client");
             exit(-2);
         }
+        else
+        {
 
-        // printf("Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
-
-        if (msg.data.operation == '1')
-        {
-            ping(msg_queue_id, msg.msg_type, msg);
-        }
-        else if (msg.data.operation == '2')
-        {
-            file_search();
-        }
-        else if (msg.data.operation == '3')
-        {
-            file_word_count();
-        }
-        else if (msg.data.operation == '4')
-        {
-            cleanup();
+            // printf("Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
+            printf("\n");
+            if (msg.data.operation == '1')
+            {
+                ping(msg_queue_id, msg.msg_type, msg);
+            }
+            else if (msg.data.operation == '2')
+            {
+                file_search();
+            }
+            else if (msg.data.operation == '3')
+            {
+                file_word_count();
+            }
+            else if (msg.data.operation == '4')
+            {
+                cleanup();
+            }
+            else if (msg.data.operation == 'r')
+            {
+                msg.data.operation = 'r';
+                if (msgsnd(msg_queue_id, &msg, MESSAGE_LENGTH, 0) == -1)
+                {
+                    printf("[Server] Message added back to the queue\n");
+                }
+            }
         }
     }
 
