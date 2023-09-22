@@ -162,6 +162,7 @@ int main()
 
         int input;
         scanf("%d", &input);
+        printf("\n");
 
         if (input == 1)
         {
