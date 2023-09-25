@@ -109,6 +109,8 @@ void file_word_count()
  */
 void cleanup()
 {
+    while(wait(NULL)>0);
+    exit();
 }
 
 /**
