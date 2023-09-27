@@ -18,6 +18,7 @@
 #include <sys/msg.h>
 #include <string.h>
 #include <sys/wait.h>
+#include<fcntl.h>
 
 #define MESSAGE_LENGTH 100
 
@@ -99,9 +100,102 @@ void file_search()
  * @brief File Word Count Server
  *
  */
-void file_word_count()
-{
+void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, const char* filename) {
+    pid_t pid;
+    int pfds[2], s;
+    char output[5000];
+    //char file_name[100];
+    
+    //printf("Enter filename: ");
+    //scanf("%99s", file_name); 
+
+    if (pipe(pfds) == -1) {
+        perror("Error: Could not create pipe");
+        exit(EXIT_FAILURE);
+    }
+
+    pid = fork();
+
+    if (pid == -1) {
+        perror("Error in forking()");
+        exit(EXIT_FAILURE);
+    } 
+    else if (pid == 0) { // Child process
+    	//close(pfds[0]);
+        dup2(pfds[1], STDIN_FILENO); 
+        close(pfds[0]); 
+        close(pfds[1]);
+        fprintf(stderr, "Entered file name %s\n", filename);
+        /*
+        int file_descriptor = open(filename, O_RDONLY);
+    	if (file_descriptor == -1) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    	}
+    	dup2(file_descriptor, STDIN_FILENO); // Redirect child's stdin to the file
+    	close(file_descriptor);
+    	*/
+        execlp("wc", "wc", "-w", filename, NULL);
+        perror("Error in execlp()");
+        exit(EXIT_FAILURE);
+    } else { // Parent process
+        close(pfds[1]);
+        //FILE *file = fopen(filename, "r");
+        /*
+	int bytes = read(pfds[0], output, sizeof(output));
+	if(bytes<0)
+	{	
+		perror("Error in reading from pipe");
+	}
+	if(bytes<1)
+	{
+		strcpy(msg.data.message, "File not found\n");
+	}
+	else
+	{
+		sscanf(output, "%s", msg.data.message);
+		printf("[Child Process] Word count: %s\n", msg.data.message);
+	}
+	printf("%d\n", bytes);
+	
+	else
+	{
+		strcpy(msg.data.message, "File found");
+	}
+	
+        if (file == NULL) {
+            perror("Error opening file");
+            exit(EXIT_FAILURE);
+        }
+        size_t bytes_read;
+	
+        while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+            write(pfds[1], buffer, bytes_read); 
+        }
+        */
+        msg.msg_type = client_id;
+        msg.data.operation = 'r';
+        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+        {
+            perror("[Child Process] Message could not be sent, please try again");
+            exit(EXIT_FAILURE);
+        }
+        else
+        {
+            printf("[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+        }
+    
+
+        //close(pfds[1]); 
+        //fclose(file);
+
+        wait(&s);
+    }
 }
+ 
+
+    
+
 
 /**
  * @brief Cleanup
@@ -168,7 +262,7 @@ int main()
             }
             else if (msg.data.operation == '3')
             {
-                file_word_count();
+                file_word_count(msg_queue_id, msg.msg_type, msg, msg.data.message);
             }
             else if (msg.data.operation == '4')
             {
