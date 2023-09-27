@@ -12,12 +12,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
-#include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #define MESSAGE_LENGTH 100
 
@@ -25,14 +25,12 @@
  * @brief The buffer structure for the message queue
  * NOTE: Here operation = -1 would mean that we are getting response from server
  */
-struct data
-{
+struct data {
     char message[MESSAGE_LENGTH];
     char operation;
 };
 
-struct msg_buffer
-{
+struct msg_buffer {
     long msg_type;
     struct data data;
 };
@@ -44,8 +42,7 @@ struct msg_buffer
  * to indicate that we are contacting the Ping Server and set msg_type to the
  * client id
  */
-void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
-{
+void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf) {
     printf("[Client] Sending message to the Ping Server...\n");
     msg_buf.data.message[0] = 'H';
     msg_buf.data.message[1] = 'f';
@@ -54,33 +51,22 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
     msg_buf.msg_type = client_id;
     msg_buf.data.operation = '1';
 
-    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
-    {
+    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1) {
         printf("[Client] Message could not be sent, please try again\n");
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        while (1)
-        {
-            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1)
-            {
+    } else {
+        while (1) {
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1) {
                 printf("[Client] Error while receiving message from the Ping Server\n");
-            }
-            else
-            {
+            } else {
                 printf("[Client] Message recieved from the Ping Server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
 
-                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
-                {
+                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r') {
                     printf("[Client] Message received from the Ping Server: %s\n", msg_buf.data.message);
                     return;
-                }
-                else
-                {
+                } else {
                     // push the message back to the queue
-                    if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1)
-                    {
+                    if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1) {
                         printf("[Client] Message could not be sent, please try again\n");
                     }
                 }
@@ -93,24 +79,49 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
  * @brief The function to contact the File Search Server
  *
  */
-void server_file_search()
-{
+void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_buf) {
+    printf("Enter the filename: ");
+    scanf("%s", msg_buf.data.message);
+
+    msg_buf.msg_type = client_id;
+    msg_buf.data.operation = '2';
+
+    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1) {
+        printf("[Client] Message could not be sent, please try again\n");
+        exit(EXIT_FAILURE);
+    } else {
+        while (1) {
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1) {
+                printf("[Client] Error while receiving message from the files search server\n");
+            } else {
+                printf("[Client] Some message recieved from the files search server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
+
+                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r') {
+                    printf("[Client] Correct message received from the files search server: %s\n", msg_buf.data.message);
+                    return;
+                } else {
+                    // push the message back to the queue
+                    if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1) {
+                        printf("[Client] Incorrect message couldn't be put back into queue\n");
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**
  * @brief The function to contact the File Word Count Server
  *
  */
-void server_file_word_count()
-{
+void server_file_word_count() {
 }
 
 /**
  * @brief The function to exit the client
  *
  */
-void server_exit()
-{
+void server_exit() {
 }
 
 /**
@@ -121,8 +132,7 @@ void server_exit()
  *
  * @return int 0
  */
-int main()
-{
+int main() {
     // Initialize the client
     printf("Initializing Client...\n");
 
@@ -131,15 +141,13 @@ int main()
     struct msg_buffer message;
 
     // Generate key for the message queue
-    while ((key = ftok("README.md", 'B')) == -1)
-    {
+    while ((key = ftok("README.md", 'B')) == -1) {
         printf("Error while generating key of the file");
         exit(EXIT_FAILURE);
     }
 
     // Connect to the messsage queue
-    while ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1)
-    {
+    while ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1) {
         printf("Error while connecting with Message Queue");
         exit(EXIT_FAILURE);
     }
@@ -152,8 +160,7 @@ int main()
     scanf("%d", &client_id);
 
     // Display the menu
-    while (1)
-    {
+    while (1) {
         printf("Choose from one of the options below: \n");
         printf("1. Enter 1 to contact the Ping Server\n");
         printf("2. Enter 2 to contact the File Search Server\n");
@@ -164,24 +171,15 @@ int main()
         scanf("%d", &input);
         printf("\n");
 
-        if (input == 1)
-        {
+        if (input == 1) {
             server_ping(msg_queue_id, client_id, message);
-        }
-        else if (input == 2)
-        {
-            server_file_search();
-        }
-        else if (input == 3)
-        {
+        } else if (input == 2) {
+            server_file_search(msg_queue_id, client_id, message);
+        } else if (input == 3) {
             server_file_word_count();
-        }
-        else if (input == 4)
-        {
+        } else if (input == 4) {
             return 0;
-        }
-        else
-        {
+        } else {
             printf("Invalid Input. Please try again.\n");
         }
     }

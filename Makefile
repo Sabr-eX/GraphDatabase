@@ -17,8 +17,8 @@ build: # Usage 'make build t=client' (given client.c is present)
 trace: # Usage 'make trace t=client' (given client.c is present)
 	mkdir -p executables
 	mkdir -p logs
-	$(CC) $(FLAGS) $(target).c -o executables/$(target).out
-	strace -o logs/$(target).log ./executables/$(target).out
+	$(CC) $(FLAGS) $(t).c -o executables/$(t).out
+	strace -o logs/$(t).log ./executables/$(t).out
 
 clean: # Usage 'make clean'
 	@if [ -d executables ]; then \
