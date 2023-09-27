@@ -1,6 +1,6 @@
 /**
  * @file server.c
- * @author Divyateja Pasupuleti
+ * @author Divyateja Pasupuleti (pro)
  * @brief
  * @version 0.1
  * @date 2023-09-20
@@ -12,24 +12,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
-#include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
-#include<fcntl.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define MESSAGE_LENGTH 100
 
-struct data
-{
+struct data {
     char message[MESSAGE_LENGTH];
     char operation;
 };
 
-struct msg_buffer
-{
+struct msg_buffer {
     long msg_type;
     struct data data;
 };
@@ -38,23 +36,18 @@ struct msg_buffer
  * @brief Ping Server
  *
  */
-void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
-{
+void ping(int msg_queue_id, int client_id, struct msg_buffer msg) {
     int file_descriptor[2];
-    if (pipe(file_descriptor) == -1)
-    {
+    if (pipe(file_descriptor) == -1) {
         printf("Error: Could not create pipe");
         exit(-1);
     }
 
     pid_t pid = fork();
-    if (pid < 0)
-    {
+    if (pid < 0) {
         perror("Error while creating child process");
         exit(-1);
-    }
-    else if (pid == 0)
-    {
+    } else if (pid == 0) {
         // Child Process
         printf("[Child Process] Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
         printf("[Child Process] Sending message back to the client...\n");
@@ -71,18 +64,13 @@ void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
         msg.msg_type = client_id;
         msg.data.operation = 'r';
 
-        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
-        {
+        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) {
             perror("[Child Process] Message could not be sent, please try again");
             exit(-3);
-        }
-        else
-        {
+        } else {
             printf("[Child Process] Message sent back to client %d successfully\n", client_id);
         }
-    }
-    else
-    {
+    } else {
         // Parent Process
         wait(NULL);
     }
@@ -92,8 +80,76 @@ void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
  * @brief File Search Server
  *
  */
-void file_search()
-{
+void file_search(const char* filename, int msg_queue_id, int client_id, struct msg_buffer msg) {
+    int link[2];
+    pid_t pid;
+    char output[4096];  // Read the filename from user input
+
+    if (pipe(link) == -1) {
+        fprintf(stderr, "%s\n", "Error in pipe creation");
+        exit(EXIT_FAILURE);
+    }
+
+    if ((pid = fork()) == -1) {
+        fprintf(stderr, "%s\n", "Error in fork creation");
+        exit(EXIT_FAILURE);
+    }
+
+    // Child process
+    if (pid == 0) {
+        dup2(link[1], STDOUT_FILENO);
+        close(link[0]);
+        close(link[1]);
+        fprintf(stderr, "Entered filename: %s\n", filename);
+        execlp("find", "find", ".", "-name", filename, NULL);
+        fprintf(stderr, "%s\n", "Error in execl");
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+        close(link[1]);
+        int nbytes = read(link[0], output, sizeof(output));
+        fprintf(stderr, "Output of find: (%.*s)\n", nbytes, output);
+        // fprintf(stderr, "Size of output: %d\n", nbytes);
+        if (nbytes < 0) {
+            perror("Error in reading from pipe");
+        }
+
+        if (nbytes < 1) {
+            strcpy(msg.data.message, "File not found\n");
+        } else {
+            strcpy(msg.data.message, "File found\n");
+        }
+
+        msg.msg_type = client_id;
+        msg.data.operation = 'r';
+
+        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) {
+            perror("[Child Process] Message could not be sent, please try again");
+            exit(-3);
+        } else {
+            fprintf(stderr, "[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+        }
+
+        // pid_t smol_pid;
+        // smol_pid = fork();
+        // if (smol_pid < 0) {
+        //     perror("Error while creating child process");
+        //     exit(-1);
+        // } else if (smol_pid == 0) {
+        //     // Child Process
+        //     if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) {
+        //         perror("[Child Process] Message could not be sent, please try again");
+        //         exit(-3);
+        //     } else {
+        //         fprintf(stderr, "[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+        //     }
+        // } else {
+        //     // Parent Process
+        //     wait(NULL);
+        // }
+        // printf("Output: (%.*s)\n", nbytes, output);
+        wait(NULL);
+    }
 }
 
 /**
@@ -201,8 +257,7 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
  * @brief Cleanup
  *
  */
-void cleanup()
-{
+void cleanup() {
 }
 
 /**
@@ -213,8 +268,7 @@ void cleanup()
  *
  * @return int
  */
-int main()
-{
+int main() {
     // Iniitalize the server
     printf("Initializing Server...\n");
 
@@ -224,15 +278,13 @@ int main()
     struct msg_buffer msg;
 
     // Link it with a key which lets you use the same key to communicate from both sides
-    if ((key = ftok("README.md", 'B')) == -1)
-    {
+    if ((key = ftok("README.md", 'B')) == -1) {
         perror("Error while generating key of the file");
         exit(-1);
     }
 
     // Create the message queue
-    if ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1)
-    {
+    if ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1) {
         perror("Error while connecting with Message Queue");
         exit(-1);
     }
@@ -240,25 +292,19 @@ int main()
     printf("Successfully connected to the Message Queue %d %d\n", key, msg_queue_id);
 
     // Listen to the message queue for new requests from the clients
-    while (1)
-    {
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), 0, 0) == -1)
-        {
+    while (1) {
+        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), 0, 0) == -1) {
             perror("Error while receiving message from the client");
             exit(-2);
-        }
-        else
-        {
-
+        } else {
             // printf("Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
             printf("\n");
-            if (msg.data.operation == '1')
-            {
+            if (msg.data.operation == '1') {
                 ping(msg_queue_id, msg.msg_type, msg);
             }
             else if (msg.data.operation == '2')
             {
-                file_search();
+                file_search(msg.data.message, msg_queue_id, msg.msg_type, msg);
             }
             else if (msg.data.operation == '3')
             {
@@ -267,12 +313,9 @@ int main()
             else if (msg.data.operation == '4')
             {
                 cleanup();
-            }
-            else if (msg.data.operation == 'r')
-            {
+            } else if (msg.data.operation == 'r') {
                 msg.data.operation = 'r';
-                if (msgsnd(msg_queue_id, &msg, MESSAGE_LENGTH, 0) == -1)
-                {
+                if (msgsnd(msg_queue_id, &msg, MESSAGE_LENGTH, 0) == -1) {
                     printf("[Server] Message added back to the queue\n");
                 }
             }
@@ -280,8 +323,7 @@ int main()
     }
 
     // Destroy the message queue
-    if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
-    {
+    if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1) {
         perror("Error while destroying the message queue");
         exit(-4);
     }
