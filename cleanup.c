@@ -56,7 +56,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
                 exit(EXIT_SUCCESS);
             }
         }
-        else if (x == 'N')
+        else
         {
             continue;
         }
