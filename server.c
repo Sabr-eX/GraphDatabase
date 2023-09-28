@@ -237,6 +237,8 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
  */
 void cleanup()
 {
+    while(wait(NULL) > 0);
+    exit();
 }
 
 /**
