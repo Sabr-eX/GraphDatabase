@@ -227,27 +227,44 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
  *
  */
 void cleanup(int msg_queue_id)
-{   
-    int    wstatus;
+{
+    int wstatus;
     pid_t w;
 
-    while (wait(NULL) > 0){}
+    while (wait(NULL) > 0)
+    {
+    }
 
-    do {
+    do
+    {
         w = wait(&wstatus);
-        if (w == -1) {
-            perror("waitpid");
+
+        if (w == -1)
+        {
+            perror("[Server - Cleanup] Waitpid");
+            // Destroy the message queue
+            while (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
+            {
+                perror("[Server - Cleanup] Error while destroying the message queue");
+            }
             exit(EXIT_FAILURE);
         }
 
-        if (WIFEXITED(wstatus)) {
-            printf("exited, status=%d\n", WEXITSTATUS(wstatus));
-        } else if (WIFSIGNALED(wstatus)) {
-            printf("killed by signal %d\n", WTERMSIG(wstatus));
-        } else if (WIFSTOPPED(wstatus)) {
-            printf("stopped by signal %d\n", WSTOPSIG(wstatus));
-        } else if (WIFCONTINUED(wstatus)) {
-            printf("continued\n");
+        if (WIFEXITED(wstatus))
+        {
+            printf("[Server - Cleanup] Exited using status=%d\n", WEXITSTATUS(wstatus));
+        }
+        else if (WIFSIGNALED(wstatus))
+        {
+            printf("[Server - Cleanup] Killed using signal %d\n", WTERMSIG(wstatus));
+        }
+        else if (WIFSTOPPED(wstatus))
+        {
+            printf("[Server - Cleanup] Stopped using signal %d\n", WSTOPSIG(wstatus));
+        }
+        else if (WIFCONTINUED(wstatus))
+        {
+            printf("[Server - Cleanup] Process still continuing\n");
         }
     } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
 
@@ -256,7 +273,6 @@ void cleanup(int msg_queue_id)
     {
         perror("[Server] Error while destroying the message queue");
     }
-    
     exit(EXIT_SUCCESS);
 }
 
@@ -307,7 +323,8 @@ int main()
             // printf("Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
             pid_t temporary_pid;
 
-            if(msg.data.operation == '4'){
+            if (msg.data.operation == '4')
+            {
                 cleanup(msg_queue_id);
                 exit(EXIT_SUCCESS);
             }
