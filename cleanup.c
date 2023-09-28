@@ -1,12 +1,12 @@
 /**
- * @file client.c
+ * @file cleanup.c
  * @author Kumarasamy Chelliah
  * @brief
  * @version 0.1
  * @date 2023-09-20
  *
  * @copyright Copyright (c) 2023
- * POSIX-compliant C program client.c
+ * POSIX-compliant C program cleanup.c
  *
  */
 
