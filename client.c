@@ -69,7 +69,8 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
             }
             else
             {
-                printf("[Client: Ping] Message recieved from the Ping Server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
+                // Logging for debugging
+                // printf("[Client: Ping] Message recieved from the Ping Server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
 
                 if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
                 {
@@ -116,7 +117,8 @@ void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_b
             }
             else
             {
-                printf("[Client: File Search] Some message recieved from the files search server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
+                // Logging for debugging
+                // printf("[Client: File Search] Some message recieved from the files search server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
 
                 if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
                 {
@@ -140,29 +142,42 @@ void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_b
  * @brief The function to contact the File Word Count Server
  *
  */
-void server_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_buf) {
+void server_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
+{
     printf("Enter the filename: ");
     scanf("%s", msg_buf.data.message);
 
     msg_buf.msg_type = client_id;
     msg_buf.data.operation = '3';
 
-    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1) {
-        printf("[Client] Message could not be sent, please try again\n");
+    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
+    {
+        printf("[Client: Word Count] Message could not be sent, please try again\n");
         exit(EXIT_FAILURE);
-    } else {
-        while (1) {
-            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1) {
-                printf("[Client] Error while receiving message from the files word count server\n");
-            } else {
-                printf("[Client] Some message recieved from the files search server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
+    }
+    else
+    {
+        while (1)
+        {
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1)
+            {
+                printf("[Client: Word Count] Error while receiving message from the files word count server\n");
+            }
+            else
+            {
+                // Logging for debugging
+                // printf("[Client] Some message recieved from the files search server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
 
-                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r') {
-                    printf("[Client] Correct message received from the files word count server: %s\n", msg_buf.data.message);
+                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
+                {
+                    printf("[Client: Word Count] Correct message received from the files word count server: %s\n", msg_buf.data.message);
                     return;
-                } else {
+                }
+                else
+                {
                     // push the message back to the queue
-                    if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1) {
+                    if (msgsnd(msg_queue_id, &msg_buf, MESSAGE_LENGTH, 0) == -1)
+                    {
                         printf("[Client] Incorrect message couldn't be put back into queue\n");
                     }
                 }

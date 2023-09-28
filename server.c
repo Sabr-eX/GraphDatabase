@@ -137,11 +137,11 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
 
         if (nbytes < 1)
         {
-            strcpy(msg.data.message, "[Child Process: File Search] File not found\n");
+            strcpy(msg.data.message, "File not found\n");
         }
         else
         {
-            strcpy(msg.data.message, "[Child Process: File Search] File found\n");
+            strcpy(msg.data.message, "File found\n");
         }
 
         msg.msg_type = client_id;
@@ -202,11 +202,15 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
         exit(EXIT_FAILURE);
     }
     else if (pid == 0)
-    {                                // Child process
-                                     // close(pfds[0]);
-        dup2(pfds[1], STDIN_FILENO); // stdin writes to the write end of the pipe
-        close(pfds[0]);              // close read end (unused)
-        close(pfds[1]);              // close write end
+    {
+        // Child process
+        // close(pfds[0]);
+        // stdin writes to the write end of the pipe
+        dup2(pfds[1], STDIN_FILENO);
+        // close read end (unused)
+        close(pfds[0]);
+        // close write end
+        close(pfds[1]);
         fprintf(stderr, "[Child Process: File Word Count] Entered file name %s\n", filename);
         // Execute wc -w on filename
         execlp("wc", "wc", "-w", filename, NULL);
@@ -215,8 +219,12 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
         exit(EXIT_FAILURE);
     }
     else
-    {                   // Parent process
-        close(pfds[1]); // close write end
+    {
+        // Parent process
+        // wait for child process
+        wait(&s);
+        // close write end
+        close(pfds[1]);
         msg.msg_type = client_id;
         msg.data.operation = 'r';
 
@@ -229,7 +237,6 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
         {
             printf("[Child Process: File Word Count] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
-        wait(&s); // wait for child process
     }
 }
 
