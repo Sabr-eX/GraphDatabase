@@ -163,61 +163,75 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
  * @brief File Word Count Server
  *
  */
-void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, const char *filename)
+void word_count(const char *filename, int msg_queue_id, int client_id, struct msg_buffer msg)
 {
+    int link[2];
     pid_t pid;
-    int pfds[2], s;
-    char output[5000];
-    if (pipe(pfds) == -1)
-    { // create pipe for communication between parent and child
-        perror("[Child Process: File Word Count] Error: Could not create pipe");
+    char output[4096];
+
+    if (pipe(link) == -1)
+    {
+        fprintf(stderr, "%s\n", "[Child Process: File Search] Error in pipe creation");
         exit(EXIT_FAILURE);
     }
 
-    pid = fork(); // fork a new process
-
-    if (pid == -1)
+    if ((pid = fork()) == -1)
     {
-        perror("[Child Process: File Word Count] Error in forking()");
+        fprintf(stderr, "%s\n", "[Child Process: File Search] Error in fork creation");
         exit(EXIT_FAILURE);
     }
-    else if (pid == 0)
+
+    // Child process
+    if (pid == 0)
     {
-        // Child process
-        // stdin writes to the write end of the pipe
-        dup2(pfds[1], STDIN_FILENO);
-        // close read end (unused)
-        close(pfds[0]);
-        // close write end
-        close(pfds[1]);
-        fprintf(stderr, "[Child Process: File Word Count] Entered file name: %s\n", filename);
-        // Execute wc -w on filename
+        dup2(link[1], STDOUT_FILENO);
+        close(link[0]);
+        close(link[1]);
+        fprintf(stderr, "[Child Process: File Search] Entered filename: %s\n", filename);
+        
+        // Use the 'wc' command to count words in the file
         execlp("wc", "wc", "-w", filename, NULL);
-        printf("[Child Process: File Word Count] Number of words in file is: ");
-        perror("[Child Process: File Word Count] Error in execlp()");
+        
+        fprintf(stderr, "%s\n", "Error in execl");
         exit(EXIT_FAILURE);
     }
     else
     {
         // Parent process
-        // wait for child process
-        wait(&s);
-        // close write end
-        close(pfds[1]);
+        close(link[1]);
+        int nbytes = read(link[0], output, sizeof(output));
+        //fprintf(stderr, "Output of wc: (%.*s)\n", nbytes, output);
+
+        if (nbytes < 0)
+        {
+            perror("[Child Process: File Search] Error in reading from pipe");
+        }
+
+        int wordCount = 0;
+        if (nbytes > 0)
+        {
+            sscanf(output, "%d", &wordCount);
+        }
+
+        //Message to be sent to client
+        snprintf(msg.data.message, sizeof(msg.data.message), "Word count: %d\n", wordCount);
         msg.msg_type = client_id;
         msg.data.operation = 'r';
 
         if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
         {
-            perror("[Child Process: File Word Count] Message could not be sent, please try again");
-            exit(EXIT_FAILURE);
+            perror("[Child Process: File Search] Message could not be sent, please try again");
+            exit(-3);
         }
         else
         {
-            printf("[Child Process: File Word Count] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+            fprintf(stderr, "[Child Process: File Search] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
+
+        wait(NULL);
     }
 }
+
 
 /**
  * @brief Cleanup
@@ -286,7 +300,7 @@ int main()
             }
             else if (msg.data.operation == '3')
             {
-                file_word_count(msg_queue_id, msg.msg_type, msg, msg.data.message);
+                word_count(msg.data.message, msg_queue_id, msg.msg_type, msg);
             }
             else if (msg.data.operation == '4')
             {
