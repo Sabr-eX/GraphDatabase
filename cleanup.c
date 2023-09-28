@@ -33,30 +33,36 @@ struct msg_buffer
     struct data data;
 };
 
-void clean(int msg_queue_id, struct msg_buffer msg_buf){
-    while(1){
+void clean(int msg_queue_id, struct msg_buffer msg_buf)
+{
+    while (1)
+    {
         printf("Do you want the server to terminate? Press Y for 'Yes' and N for 'No': ");
         char x;
         scanf("%s", &x);
-        if( x == 'Y'){
+        if (x == 'Y')
+        {
             msg_buf.data.operation = '4';
 
             if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
             {
-                printf("[Client] Message could not be sent, please try again\n");
+                printf("[Cleanup] Message could not be sent, please try again\n");
             }
-            else{
-                printf("[Client] Message sent to Main Server");
+            else
+            {
+                printf("[Cleanup] Message sent to Main Server");
                 exit(EXIT_FAILURE);
             }
         }
-        else if(x == 'N'){
+        else if (x == 'N')
+        {
             continue;
         }
     }
 }
 
-int main(){
+int main()
+{
 
     // Initialize the client
     printf("Initializing Client...\n");
@@ -71,7 +77,7 @@ int main(){
         printf("Error while generating key of the file");
         exit(EXIT_FAILURE);
     }
-    
+
     // Connect to the messsage queue
     while ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1)
     {
@@ -81,7 +87,7 @@ int main(){
 
     printf("Successfully connected to the Message Queue %d %d\n", key, msg_queue_id);
 
-    clean(int msg_queue_id, struct msg_buffer msg_buf);
+    clean(msg_queue_id, msg_buf);
 
     return 0;
 }

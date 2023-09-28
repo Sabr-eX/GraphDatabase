@@ -154,7 +154,7 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
         }
         else
         {
-            fprintf(stderr, "[Child Process: File Search] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+            fprintf(stderr, "[Child Process: File Word] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
 
         // pid_t smol_pid;
@@ -190,7 +190,7 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
     char output[5000];
     if (pipe(pfds) == -1)
     { // create pipe for communication between parent and child
-        perror("Error: Could not create pipe");
+        perror("[Child Process: File Word Count] Error: Could not create pipe");
         exit(EXIT_FAILURE);
     }
 
@@ -198,7 +198,7 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
 
     if (pid == -1)
     {
-        perror("Error in forking()");
+        perror("[Child Process: File Word Count] Error in forking()");
         exit(EXIT_FAILURE);
     }
     else if (pid == 0)
@@ -207,11 +207,11 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
         dup2(pfds[1], STDIN_FILENO); // stdin writes to the write end of the pipe
         close(pfds[0]);              // close read end (unused)
         close(pfds[1]);              // close write end
-        fprintf(stderr, "Entered file name %s\n", filename);
+        fprintf(stderr, "[Child Process: File Word Count] Entered file name %s\n", filename);
         // Execute wc -w on filename
         execlp("wc", "wc", "-w", filename, NULL);
-        printf("Number of words in file is: ");
-        perror("Error in execlp()");
+        printf("[Child Process: File Word Count] Number of words in file is: ");
+        perror("[Child Process: File Word Count] Error in execlp()");
         exit(EXIT_FAILURE);
     }
     else
@@ -222,12 +222,12 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
 
         if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
         {
-            perror("[Child Process] Message could not be sent, please try again");
+            perror("[Child Process: File Word Count] Message could not be sent, please try again");
             exit(EXIT_FAILURE);
         }
         else
         {
-            printf("[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+            printf("[Child Process: File Word Count] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
         wait(&s); // wait for child process
     }
@@ -255,7 +255,7 @@ void cleanup()
 int main()
 {
     // Iniitalize the server
-    printf("Initializing Server...\n");
+    printf("[Server] Initializing Server...\n");
 
     // Create the message queue
     key_t key;
@@ -265,25 +265,25 @@ int main()
     // Link it with a key which lets you use the same key to communicate from both sides
     if ((key = ftok("README.md", 'B')) == -1)
     {
-        perror("Error while generating key of the file");
+        perror("[Server] Error while generating key of the file");
         exit(-1);
     }
 
     // Create the message queue
     if ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1)
     {
-        perror("Error while connecting with Message Queue");
+        perror("[Server] Error while connecting with Message Queue");
         exit(-1);
     }
 
-    printf("Successfully connected to the Message Queue %d %d\n", key, msg_queue_id);
+    printf("[Server] Successfully connected to the Message Queue %d %d\n", key, msg_queue_id);
 
     // Listen to the message queue for new requests from the clients
     while (1)
     {
         if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), 0, 0) == -1)
         {
-            perror("Error while receiving message from the client");
+            perror("[Server] Error while receiving message from the client");
             exit(-2);
         }
         else
@@ -320,7 +320,7 @@ int main()
     // Destroy the message queue
     if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
     {
-        perror("Error while destroying the message queue");
+        perror("[Server] Error while destroying the message queue");
         exit(-4);
     }
 
