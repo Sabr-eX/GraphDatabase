@@ -226,11 +226,38 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
  * @brief Cleanup
  *
  */
-void cleanup()
-{
-    while (wait(NULL) > 0)
-        ;
-    exit(-1);
+void cleanup(int msg_queue_id)
+{   
+    int    wstatus;
+    pid_t w;
+
+    while (wait(NULL) > 0){}
+
+    do {
+        w = wait(&wstatus);
+        if (w == -1) {
+            perror("waitpid");
+            exit(EXIT_FAILURE);
+        }
+
+        if (WIFEXITED(wstatus)) {
+            printf("exited, status=%d\n", WEXITSTATUS(wstatus));
+        } else if (WIFSIGNALED(wstatus)) {
+            printf("killed by signal %d\n", WTERMSIG(wstatus));
+        } else if (WIFSTOPPED(wstatus)) {
+            printf("stopped by signal %d\n", WSTOPSIG(wstatus));
+        } else if (WIFCONTINUED(wstatus)) {
+            printf("continued\n");
+        }
+    } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
+
+    // Destroy the message queue
+    while (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
+    {
+        perror("[Server] Error while destroying the message queue");
+    }
+    
+    exit(EXIT_SUCCESS);
 }
 
 /**
@@ -279,6 +306,12 @@ int main()
         {
             // printf("Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
             pid_t temporary_pid;
+
+            if(msg.data.operation == '4'){
+                cleanup(msg_queue_id);
+                exit(EXIT_SUCCESS);
+            }
+
             temporary_pid = fork();
 
             if (temporary_pid < 0)
@@ -297,9 +330,6 @@ int main()
                     break;
                 case '3':
                     word_count(msg.data.message, msg_queue_id, msg.msg_type, msg);
-                    break;
-                case '4':
-                    cleanup();
                     break;
                 case 'r':
                 {

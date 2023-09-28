@@ -40,7 +40,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
         printf("Do you want the server to terminate? Press Y for 'Yes' and N for 'No': ");
         char x;
         scanf("%s", &x);
-        if (x == 'Y')
+        if (x == 'Y'|| x == 'y')
         {
             msg_buf.msg_type = __INT_MAX__;
             msg_buf.data.operation = '4';
@@ -53,7 +53,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
             else
             {
                 printf("[Cleanup] Message sent to Main Server\n");
-                exit(EXIT_FAILURE);
+                exit(EXIT_SUCCESS);
             }
         }
         else if (x == 'N')
