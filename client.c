@@ -236,6 +236,7 @@ int main()
     // Display the menu
     while (1)
     {
+        printf("\n");
         printf("Choose from one of the options below: \n");
         printf("1. Enter 1 to contact the Ping Server\n");
         printf("2. Enter 2 to contact the File Search Server\n");

@@ -184,14 +184,13 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
     else if (pid == 0)
     {
         // Child process
-        // close(pfds[0]);
         // stdin writes to the write end of the pipe
         dup2(pfds[1], STDIN_FILENO);
         // close read end (unused)
         close(pfds[0]);
         // close write end
         close(pfds[1]);
-        fprintf(stderr, "[Child Process: File Word Count] Entered file name %s\n", filename);
+        fprintf(stderr, "[Child Process: File Word Count] Entered file name: %s\n", filename);
         // Execute wc -w on filename
         execlp("wc", "wc", "-w", filename, NULL);
         printf("[Child Process: File Word Count] Number of words in file is: ");
