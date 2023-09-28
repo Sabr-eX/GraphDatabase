@@ -17,6 +17,7 @@
 #include <sys/msg.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #define MESSAGE_LENGTH 100
@@ -182,9 +183,53 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
  * @brief File Word Count Server
  *
  */
-void file_word_count()
-{
+void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, const char* filename) {
+    pid_t pid;
+    int pfds[2], s;
+    char output[5000];
+        if (pipe(pfds) == -1) {//create pipe for communication between parent and child
+        perror("Error: Could not create pipe");
+        exit(EXIT_FAILURE);
+    }
+
+    pid = fork(); //fork a new process
+
+    if (pid == -1) {
+        perror("Error in forking()");
+        exit(EXIT_FAILURE);
+    } 
+    else if (pid == 0) { // Child process
+    	//close(pfds[0]);
+        dup2(pfds[1], STDIN_FILENO); //stdin writes to the write end of the pipe
+        close(pfds[0]); //close read end (unused)
+        close(pfds[1]); //close write end
+        fprintf(stderr, "Entered file name %s\n", filename);
+        //Execute wc -w on filename
+        execlp("wc", "wc", "-w", filename, NULL);
+        printf("Number of words in file is: ");
+        perror("Error in execlp()");
+        exit(EXIT_FAILURE);
+    } else { // Parent process
+        close(pfds[1]); //close write end
+        msg.msg_type = client_id;
+        msg.data.operation = 'r';
+        
+        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+        {
+            perror("[Child Process] Message could not be sent, please try again");
+            exit(EXIT_FAILURE);
+        }
+        else
+        {
+            printf("[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
+        }
+        wait(&s);//wait for child process
+    }
 }
+ 
+
+    
+
 
 /**
  * @brief Cleanup
@@ -250,7 +295,7 @@ int main()
             }
             else if (msg.data.operation == '3')
             {
-                file_word_count();
+                file_word_count(msg_queue_id, msg.msg_type, msg, msg.data.message);
             }
             else if (msg.data.operation == '4')
             {
