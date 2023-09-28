@@ -40,51 +40,30 @@ struct msg_buffer
  */
 void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
 {
-    int file_descriptor[2];
-    if (pipe(file_descriptor) == -1)
+    printf("[Child Process: Ping] Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
+    sleep(10);
+    printf("[Child Process: Ping] Sending message back to the client...\n");
+
+    // We send back hello
+    msg.data.message[0] = 'H';
+    msg.data.message[1] = 'e';
+    msg.data.message[2] = 'l';
+    msg.data.message[3] = 'l';
+    msg.data.message[4] = 'o';
+    msg.data.message[5] = '\0';
+
+    // We set message type as the client id
+    msg.msg_type = client_id;
+    msg.data.operation = 'r';
+
+    if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
     {
-        printf("Error: Could not create pipe");
-        exit(-1);
-    }
-
-    pid_t pid = fork();
-    if (pid < 0)
-    {
-        perror("Error while creating child process");
-        exit(-1);
-    }
-    else if (pid == 0)
-    {
-        // Child Process
-        printf("[Child Process: Ping] Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
-        printf("[Child Process: Ping] Sending message back to the client...\n");
-
-        // We send back hello
-        msg.data.message[0] = 'H';
-        msg.data.message[1] = 'e';
-        msg.data.message[2] = 'l';
-        msg.data.message[3] = 'l';
-        msg.data.message[4] = 'o';
-        msg.data.message[5] = '\0';
-
-        // We set message type as the client id
-        msg.msg_type = client_id;
-        msg.data.operation = 'r';
-
-        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
-        {
-            perror("[Child Process: Ping] Message could not be sent, please try again");
-            exit(-3);
-        }
-        else
-        {
-            printf("[Child Process: Ping] Message sent back to client %d successfully\n", client_id);
-        }
+        perror("[Child Process: Ping] Message could not be sent, please try again");
+        exit(-3);
     }
     else
     {
-        // Parent Process
-        wait(NULL);
+        printf("[Child Process: Ping] Message sent back to client %d successfully\n", client_id);
     }
 }
 
@@ -188,10 +167,10 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         close(link[0]);
         close(link[1]);
         fprintf(stderr, "[Child Process: File Search] Entered filename: %s\n", filename);
-        
+
         // Use the 'wc' command to count words in the file
         execlp("wc", "wc", "-w", filename, NULL);
-        
+
         fprintf(stderr, "%s\n", "Error in execl");
         exit(EXIT_FAILURE);
     }
@@ -200,7 +179,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         // Parent process
         close(link[1]);
         int nbytes = read(link[0], output, sizeof(output));
-        //fprintf(stderr, "Output of wc: (%.*s)\n", nbytes, output);
+        // fprintf(stderr, "Output of wc: (%.*s)\n", nbytes, output);
 
         if (nbytes < 0)
         {
@@ -213,7 +192,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
             sscanf(output, "%d", &wordCount);
         }
 
-        //Message to be sent to client
+        // Message to be sent to client
         snprintf(msg.data.message, sizeof(msg.data.message), "Word count: %d\n", wordCount);
         msg.msg_type = client_id;
         msg.data.operation = 'r';
@@ -231,7 +210,6 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         wait(NULL);
     }
 }
-
 
 /**
  * @brief Cleanup
@@ -292,7 +270,12 @@ int main()
             printf("\n");
             if (msg.data.operation == '1')
             {
-                ping(msg_queue_id, msg.msg_type, msg);
+                pid_t temporary_pid;
+                temporary_pid = fork();
+                if (temporary_pid == -1)
+                    printf("[Server] Error while creating child process for ping\n");
+                else if (temporary_pid == 0)
+                    ping(msg_queue_id, msg.msg_type, msg);
             }
             else if (msg.data.operation == '2')
             {

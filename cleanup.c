@@ -52,7 +52,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
             }
             else
             {
-                printf("[Cleanup] Message sent to Main Server");
+                printf("[Cleanup] Message sent to Main Server\n");
                 exit(EXIT_FAILURE);
             }
         }
