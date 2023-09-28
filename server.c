@@ -110,7 +110,7 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
     {
         // Parent process
         // First wait for the child process to terminate
-        wait(NULL);
+        waitpid(pid, NULL, 0);
 
         close(link[1]);
         int nbytes = read(link[0], output, sizeof(output));
@@ -186,7 +186,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
     {
         // Parent process
         // Wait for the child process to terminate
-        wait(NULL);
+        waitpid(pid, NULL, 0);
 
         close(link[1]);
         int nbytes = read(link[0], output, sizeof(output));
