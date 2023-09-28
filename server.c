@@ -10,6 +10,7 @@
  *
  */
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +18,6 @@
 #include <sys/msg.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 #define MESSAGE_LENGTH 100
@@ -89,16 +89,14 @@ void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
 }
 
 /**
- * @brief File Search Server
+ * @brief File Search Server. Uses 'find' function to get output.
  *
  */
 void file_search(const char *filename, int msg_queue_id, int client_id, struct msg_buffer msg)
 {
     int link[2];
     pid_t pid;
-
-    // Read the filename from user input
-    char output[4096];
+    char output[4096]; // Read the filename from user input
 
     if (pipe(link) == -1)
     {
@@ -129,7 +127,7 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
         close(link[1]);
         int nbytes = read(link[0], output, sizeof(output));
         fprintf(stderr, "Output of find: (%.*s)\n", nbytes, output);
-        // fprintf(stderr, "Size of output: %d\n", nbytes);
+
         if (nbytes < 0)
         {
             perror("[Child Process: File Search] Error in reading from pipe");
@@ -157,24 +155,6 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
             fprintf(stderr, "[Child Process: File Word] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
 
-        // pid_t smol_pid;
-        // smol_pid = fork();
-        // if (smol_pid < 0) {
-        //     perror("Error while creating child process");
-        //     exit(-1);
-        // } else if (smol_pid == 0) {
-        //     // Child Process
-        //     if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) {
-        //         perror("[Child Process] Message could not be sent, please try again");
-        //         exit(-3);
-        //     } else {
-        //         fprintf(stderr, "[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
-        //     }
-        // } else {
-        //     // Parent Process
-        //     wait(NULL);
-        // }
-        // printf("Output: (%.*s)\n", nbytes, output);
         wait(NULL);
     }
 }

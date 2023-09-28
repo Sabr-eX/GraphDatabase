@@ -48,7 +48,7 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 {
     printf("[Client: Ping] Sending message to the Ping Server...\n");
     msg_buf.data.message[0] = 'H';
-    msg_buf.data.message[1] = 'f';
+    msg_buf.data.message[1] = 'i';
     msg_buf.data.message[2] = '\0';
 
     msg_buf.msg_type = client_id;
@@ -91,7 +91,8 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 }
 
 /**
- * @brief The function to contact the File Search Server
+ * @brief The function to contact the File Search Server.
+ * Send the name of the relevant file and waits for reposnse from server
  *
  */
 void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
