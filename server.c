@@ -35,7 +35,7 @@ struct msg_buffer
 };
 
 /**
- * @brief Ping Server
+ * @brief Ping Server: Sends back hello to the client
  *
  */
 void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
@@ -69,14 +69,16 @@ void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
 }
 
 /**
- * @brief File Search Server. Uses 'find' function to get output.
+ * @brief File Search Server: Uses 'find' function to get output.
  *
  */
 void file_search(const char *filename, int msg_queue_id, int client_id, struct msg_buffer msg)
 {
     int link[2];
     pid_t pid;
-    char output[4096]; // Read the filename from user input
+
+    // Read the filename from user input
+    char output[4096];
 
     if (pipe(link) == -1)
     {
@@ -90,23 +92,29 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
         exit(EXIT_FAILURE);
     }
 
-    // Child process
     if (pid == 0)
     {
+        // Child process
         dup2(link[1], STDOUT_FILENO);
         close(link[0]);
         close(link[1]);
         fprintf(stderr, "[Child Process: File Search] Entered filename: %s\n", filename);
+
+        // use the find command to check file names
         execlp("find", "find", ".", "-name", filename, NULL);
-        fprintf(stderr, "%s\n", "Error in execl");
+
+        fprintf(stderr, "%s\n", "Error in execlp");
         exit(EXIT_FAILURE);
     }
     else
     {
         // Parent process
+        // First wait for the child process to terminate
+        wait(NULL);
+
         close(link[1]);
         int nbytes = read(link[0], output, sizeof(output));
-        fprintf(stderr, "Output of find: (%.*s)\n", nbytes, output);
+        fprintf(stderr, "[Child Process: File Search] Output of find: (%.*s)\n", nbytes, output);
 
         if (nbytes < 0)
         {
@@ -134,14 +142,12 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
         {
             fprintf(stderr, "[Child Process: File Word] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
-
-        wait(NULL);
         exit(EXIT_SUCCESS);
     }
 }
 
 /**
- * @brief File Word Count Server
+ * @brief File Word Count Server: Uses 'wc' function to get output.
  *
  */
 void word_count(const char *filename, int msg_queue_id, int client_id, struct msg_buffer msg)
@@ -162,9 +168,9 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         exit(EXIT_FAILURE);
     }
 
-    // Child process
     if (pid == 0)
     {
+        // Child process
         dup2(link[1], STDOUT_FILENO);
         close(link[0]);
         close(link[1]);
@@ -179,6 +185,9 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
     else
     {
         // Parent process
+        // Wait for the child process to terminate
+        wait(NULL);
+
         close(link[1]);
         int nbytes = read(link[0], output, sizeof(output));
         // fprintf(stderr, "Output of wc: (%.*s)\n", nbytes, output);
@@ -209,7 +218,6 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
             fprintf(stderr, "[Child Process: File Search] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
 
-        wait(NULL);
         exit(EXIT_SUCCESS);
     }
 }

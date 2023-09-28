@@ -67,7 +67,7 @@ server’s child to client) need to be done through the single message queue
 mentioned in the above point. You are not allowed to create more than one
 message queue for this purpose. [Hint: use the mtype]
 
-f) The client will wait for a reply from the server (actually it will be the server’s child,
+[DONE] f) The client will wait for a reply from the server (actually it will be the server’s child,
 as described later). On receiving the reply, the client will display the output to the
 user and redisplay the menu options, until the user chooses option 4. Upon
 choosing option 4, the client will gracefully terminate. Graceful termination implies
@@ -82,23 +82,23 @@ communication with the clients.
 [DONE] b) The main server will listen to the message queue for new requests from the
 clients.
 
-c) Upon receipt of a request from a client, the main server will spawn a child server
+[DONE] c) Upon receipt of a request from a client, the main server will spawn a child server
 and offload the execution of the specific task (as specified by the client) to the
 child server. Thus, for every client request, a separate child server will be created
 and the main server will keep listening for more client requests.
 
-d) All communications between the main server and its children will need to be done
+[DONE] d) All communications between the main server and its children will need to be done
 only through pipes. No other IPC mechanism should be used for this purpose.
 You may create as many pipes as required for communication between the main
 server and its children.
 
-e) For option 1 in the client menu, the client will send a “hi” to the server via the
+[DONE] e) For option 1 in the client menu, the client will send a “hi” to the server via the
 single message queue and a child of the server (spawned by the server) will
 reply back to the client with a “hello”. The “hello” should be sent back to the client
 using the single message queue described above. After sending the reply, the
 specific server child will perform the relevant cleanup activities and terminate.
 
-f) For options 2 and 3 in the client menu, the child should use the exec() family of
+[DONE] f) For options 2 and 3 in the client menu, the child should use the exec() family of
 functions and the relevant Linux commands to accomplish the tasks. For the file
 search task, the child server (not the main server) will inform the client if the file
 exists or not and the client will display the search result to the user. For the file
@@ -110,21 +110,22 @@ defined format. `You will need to figure out how to do this given that the exec(
 functions replace the executable code in the current process and then
 accordingly figure out how to communicate the result back to the client.`
 
-g) The main server should loop forever listening for new requests from any of the
+[DONE] g) The main server should loop forever listening for new requests from any of the
 clients. Upon a request, it spawns a child to service the request and listen for
 more requests.
 
 ### Write a POSIX compliant C program cleanup.c.
 
-1. This cleanup process can keep running along with the clients and the main
-   server. This process will keep displaying a menu as:
-   Do you want the server to terminate? Press Y for Yes and N for No.
+[DONE] 1. This cleanup process can keep running along with the clients and the main
+server. This process will keep displaying a menu as:
+Do you want the server to terminate? Press Y for Yes and N for No.
 
-2. If N is given as input, the process keeps running as usual and will not
-   communicate with any other process. If Y is given as input, the process will
-   inform the main server via the single message queue that the main server needs
-   to terminate. Remember when the main server terminates, the child servers
-   should also terminate.
+[DONE] 2. If N is given as input, the process keeps running as usual and will not
+communicate with any other process. If Y is given as input, the process will
+inform the main server via the single message queue that the main server needs
+to terminate. Remember when the main server terminates, the child servers
+should also terminate.
+
 3. Assume that the main server will never force one or more
    child servers to exit without servicing the relevant client requests. After passing
    on the terminate information to the main server, the cleanup process will
@@ -134,10 +135,13 @@ more requests.
 
 4. Use wait()s appropriately. Perform all relevant error handling properly without which
    marks will be deducted.
-5. Note the files that are used in options 2 and 3 are simple ASCII (text only) files.
-6. You can assume that all the C files as well as the files for options 2 and 3 are present in
-   the same directory.
-7. You should not use more than one message queue in the entire assignment. The
-   communications which are specified to be done using the single message queue, should
-   be done using the message queue only and no other IPC mechanism should be used in
-   those cases.
+
+[DONE] 5. Note the files that are used in options 2 and 3 are simple ASCII (text only) files.
+
+[DONE] 6. You can assume that all the C files as well as the files for options 2 and 3 are present in
+the same directory.
+
+[DONE] 7. You should not use more than one message queue in the entire assignment. The
+communications which are specified to be done using the single message queue, should
+be done using the message queue only and no other IPC mechanism should be used in
+those cases.
