@@ -42,7 +42,9 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
         scanf("%s", &x);
         if (x == 'Y')
         {
+            msg_buf.msg_type = __INT_MAX__;
             msg_buf.data.operation = '4';
+            msg_buf.data.message[0] = '\0';
 
             if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
             {
