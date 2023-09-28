@@ -183,37 +183,43 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
  * @brief File Word Count Server
  *
  */
-void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, const char* filename) {
+void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, const char *filename)
+{
     pid_t pid;
     int pfds[2], s;
     char output[5000];
-        if (pipe(pfds) == -1) {//create pipe for communication between parent and child
+    if (pipe(pfds) == -1)
+    { // create pipe for communication between parent and child
         perror("Error: Could not create pipe");
         exit(EXIT_FAILURE);
     }
 
-    pid = fork(); //fork a new process
+    pid = fork(); // fork a new process
 
-    if (pid == -1) {
+    if (pid == -1)
+    {
         perror("Error in forking()");
         exit(EXIT_FAILURE);
-    } 
-    else if (pid == 0) { // Child process
-    	//close(pfds[0]);
-        dup2(pfds[1], STDIN_FILENO); //stdin writes to the write end of the pipe
-        close(pfds[0]); //close read end (unused)
-        close(pfds[1]); //close write end
+    }
+    else if (pid == 0)
+    {                                // Child process
+                                     // close(pfds[0]);
+        dup2(pfds[1], STDIN_FILENO); // stdin writes to the write end of the pipe
+        close(pfds[0]);              // close read end (unused)
+        close(pfds[1]);              // close write end
         fprintf(stderr, "Entered file name %s\n", filename);
-        //Execute wc -w on filename
+        // Execute wc -w on filename
         execlp("wc", "wc", "-w", filename, NULL);
         printf("Number of words in file is: ");
         perror("Error in execlp()");
         exit(EXIT_FAILURE);
-    } else { // Parent process
-        close(pfds[1]); //close write end
+    }
+    else
+    {                   // Parent process
+        close(pfds[1]); // close write end
         msg.msg_type = client_id;
         msg.data.operation = 'r';
-        
+
         if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
         {
             perror("[Child Process] Message could not be sent, please try again");
@@ -223,13 +229,9 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
         {
             printf("[Child Process] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
-        wait(&s);//wait for child process
+        wait(&s); // wait for child process
     }
 }
- 
-
-    
-
 
 /**
  * @brief Cleanup
@@ -237,8 +239,9 @@ void file_word_count(int msg_queue_id, int client_id, struct msg_buffer msg, con
  */
 void cleanup()
 {
-    while(wait(NULL) > 0);
-    exit();
+    while (wait(NULL) > 0)
+        ;
+    exit(-1);
 }
 
 /**
