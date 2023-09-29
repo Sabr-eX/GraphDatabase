@@ -316,7 +316,7 @@ int main()
         if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), 0, 0) == -1)
         {
             perror("[Server] Error while receiving message from the client");
-            exit(-2);
+            exit(EXIT_FAILURE);
         }
         else
         {
@@ -328,40 +328,41 @@ int main()
                 cleanup(msg_queue_id);
                 exit(EXIT_SUCCESS);
             }
-
-            temporary_pid = fork();
-
-            if (temporary_pid < 0)
+            else if (msg.data.operation == 'r')
             {
-                perror("[Server] Error while creating child process\n");
+                msg.data.operation = 'r';
+                if (msgsnd(msg_queue_id, &msg, MESSAGE_LENGTH, 0) == -1)
+                {
+                    printf("[Server] Message added back to the queue\n");
+                }
             }
-            else if (temporary_pid == 0)
+            else
             {
-                switch (msg.data.operation)
+                printf("[Server] Creating new child process\n");
+                temporary_pid = fork();
+                if (temporary_pid < 0)
                 {
-                case '1':
-                    ping(msg_queue_id, msg.msg_type, msg);
-                    break;
-                case '2':
-                    file_search(msg.data.message, msg_queue_id, msg.msg_type, msg);
-                    break;
-                case '3':
-                    word_count(msg.data.message, msg_queue_id, msg.msg_type, msg);
-                    break;
-                case 'r':
+                    perror("[Server] Error while creating child process");
+                }
+                else if (temporary_pid == 0)
                 {
-                    msg.data.operation = 'r';
-                    if (msgsnd(msg_queue_id, &msg, MESSAGE_LENGTH, 0) == -1)
+                    switch (msg.data.operation)
                     {
-                        printf("[Server] Message added back to the queue\n");
+                    case '1':
+                        ping(msg_queue_id, msg.msg_type, msg);
+                        break;
+                    case '2':
+                        file_search(msg.data.message, msg_queue_id, msg.msg_type, msg);
+                        break;
+                    case '3':
+                        word_count(msg.data.message, msg_queue_id, msg.msg_type, msg);
+                        break;
+                    default:
+                        perror("Incorrect operation");
+                        break;
                     }
-                    break;
+                    exit(EXIT_SUCCESS);
                 }
-                default:
-                    perror("Incorrect operation");
-                    break;
-                }
-                exit(EXIT_SUCCESS);
             }
         }
     }
