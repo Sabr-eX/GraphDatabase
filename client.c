@@ -157,7 +157,7 @@ void client_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_bu
     msg_buf.data.client_id = client_id;
     msg_buf.data.operation = '3';
 
-    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
+    if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1) //send message to server
     {
         printf("[Client: Word Count] Message could not be sent, please try again\n");
         exit(EXIT_FAILURE);
@@ -166,7 +166,7 @@ void client_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_bu
     {
         while (1)
         {
-            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), client_id, 0) == -1)
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), client_id, 0) == -1) //receive message from server
             {
                 printf("[Client: Word Count] Error while receiving message from the files word count server\n");
             }
@@ -175,7 +175,7 @@ void client_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_bu
                 // Logging for debugging
                 // printf("[Client] Some message recieved from the files search server %ld: %s using %c\n", msg_buf.msg_type, msg_buf.data.message, msg_buf.data.operation);
 
-                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r')
+                if (msg_buf.msg_type == client_id && msg_buf.data.operation == 'r') //check if message has reached right client, intended op type
                 {
                     printf("[Client: Word Count] Correct message received from the files word count server: %s\n", msg_buf.data.message);
                     return;
