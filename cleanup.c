@@ -18,6 +18,7 @@
 #include <sys/msg.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <limits.h>
 
 #define MESSAGE_LENGTH 100
 
@@ -25,6 +26,7 @@ struct data
 {
     char message[MESSAGE_LENGTH];
     char operation;
+    long client_id;
 };
 
 struct msg_buffer
@@ -40,10 +42,11 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
         printf("Do you want the server to terminate? Press Y for 'Yes' and N for 'No': ");
         char x;
         scanf("%s", &x);
-        if (x == 'Y'|| x == 'y')
+        if (x == 'Y' || x == 'y')
         {
-            msg_buf.msg_type = __INT_MAX__;
+            msg_buf.msg_type = INT_MAX;
             msg_buf.data.operation = '4';
+            msg_buf.data.client_id = 0;
             msg_buf.data.message[0] = '\0';
 
             if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
@@ -74,7 +77,7 @@ int main()
     struct msg_buffer msg_buf;
 
     // Generate key for the message queue
-    while ((key = ftok("README.md", 'B')) == -1)
+    while ((key = ftok(".", 'B')) == -1)
     {
         printf("Error while generating key of the file");
         exit(EXIT_FAILURE);

@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define MESSAGE_LENGTH 100
 
@@ -26,6 +27,7 @@ struct data
 {
     char message[MESSAGE_LENGTH];
     char operation;
+    long client_id;
 };
 
 struct msg_buffer
@@ -40,7 +42,7 @@ struct msg_buffer
  */
 void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
 {
-    printf("[Child Process: Ping] Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
+    printf("[Child Process: Ping] Message received from Client %d-Operation %c -> %s\n", client_id, msg.data.operation, msg.data.message);
     sleep(5);
     printf("[Child Process: Ping] Sending message back to the client...\n");
 
@@ -52,8 +54,9 @@ void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
     msg.data.message[4] = 'o';
     msg.data.message[5] = '\0';
 
-    // We set message type as the client id
+    // We set message type as the client id so that only client receives the code
     msg.msg_type = client_id;
+    msg.data.client_id = client_id;
     msg.data.operation = 'r';
 
     if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
@@ -131,6 +134,7 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
         }
 
         msg.msg_type = client_id;
+        msg.data.client_id = client_id;
         msg.data.operation = 'r';
 
         if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
@@ -205,7 +209,10 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
 
         // Message to be sent to client
         snprintf(msg.data.message, sizeof(msg.data.message), "Word count: %d\n", wordCount);
+
+        // We use message type as client so that only client receives that message
         msg.msg_type = client_id;
+        msg.data.client_id = client_id;
         msg.data.operation = 'r';
 
         if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
@@ -241,12 +248,15 @@ void cleanup(int msg_queue_id)
 
         if (w == -1)
         {
+            // This would mean there is no child
             perror("[Server - Cleanup] Waitpid");
+
             // Destroy the message queue
             while (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
             {
                 perror("[Server - Cleanup] Error while destroying the message queue");
             }
+
             exit(EXIT_FAILURE);
         }
 
@@ -273,6 +283,7 @@ void cleanup(int msg_queue_id)
     {
         perror("[Server] Error while destroying the message queue");
     }
+
     exit(EXIT_SUCCESS);
 }
 
@@ -295,7 +306,7 @@ int main()
     struct msg_buffer msg;
 
     // Link it with a key which lets you use the same key to communicate from both sides
-    if ((key = ftok("README.md", 'B')) == -1)
+    if ((key = ftok(".", 'B')) == -1)
     {
         perror("[Server] Error while generating key of the file");
         exit(EXIT_FAILURE);
@@ -313,14 +324,16 @@ int main()
     // Listen to the message queue for new requests from the clients
     while (1)
     {
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), 0, 0) == -1)
+        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), INT_MAX, 0) == -1)
         {
             perror("[Server] Error while receiving message from the client");
             exit(EXIT_FAILURE);
         }
         else
         {
-            // printf("Message received from Client %ld-Operation %c -> %s\n", msg.msg_type, msg.data.operation, msg.data.message);
+            // Debugging logs
+            // printf("[Logs] Message received from Client %ld-Operation %c -> %s\n", msg.data.client_id, msg.data.operation, msg.data.message);
+
             pid_t temporary_pid;
 
             if (msg.data.operation == '4')
@@ -333,12 +346,12 @@ int main()
                 msg.data.operation = 'r';
                 if (msgsnd(msg_queue_id, &msg, MESSAGE_LENGTH, 0) == -1)
                 {
-                    printf("[Server] Message added back to the queue\n");
+                    printf("[Server] Message could not be added back to the queue\n");
                 }
             }
             else
             {
-                printf("[Server] Creating new child process\n");
+                printf("[Server] Creating new child process for the new request received\n");
                 temporary_pid = fork();
                 if (temporary_pid < 0)
                 {
@@ -349,13 +362,13 @@ int main()
                     switch (msg.data.operation)
                     {
                     case '1':
-                        ping(msg_queue_id, msg.msg_type, msg);
+                        ping(msg_queue_id, msg.data.client_id, msg);
                         break;
                     case '2':
-                        file_search(msg.data.message, msg_queue_id, msg.msg_type, msg);
+                        file_search(msg.data.message, msg_queue_id, msg.data.client_id, msg);
                         break;
                     case '3':
-                        word_count(msg.data.message, msg_queue_id, msg.msg_type, msg);
+                        word_count(msg.data.message, msg_queue_id, msg.data.client_id, msg);
                         break;
                     default:
                         perror("Incorrect operation");

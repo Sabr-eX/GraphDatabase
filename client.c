@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define MESSAGE_LENGTH 100
 
@@ -29,6 +30,7 @@ struct data
 {
     char message[MESSAGE_LENGTH];
     char operation;
+    long client_id;
 };
 
 struct msg_buffer
@@ -44,14 +46,16 @@ struct msg_buffer
  * to indicate that we are contacting the Ping Server and set msg_type to the
  * client id
  */
-void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
+void client_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 {
     printf("[Client: Ping] Sending message to the Ping Server...\n");
+
     msg_buf.data.message[0] = 'H';
     msg_buf.data.message[1] = 'i';
     msg_buf.data.message[2] = '\0';
 
-    msg_buf.msg_type = client_id;
+    msg_buf.msg_type = INT_MAX;
+    msg_buf.data.client_id = client_id;
     msg_buf.data.operation = '1';
 
     if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
@@ -63,7 +67,7 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
     {
         while (1)
         {
-            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1)
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), client_id, 0) == -1)
             {
                 printf("[Client: Ping] Error while receiving message from the Ping Server\n");
             }
@@ -95,12 +99,13 @@ void server_ping(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
  * Send the name of the relevant file and waits for reposnse from server
  *
  */
-void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
+void client_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 {
     printf("Enter the filename: ");
     scanf("%s", msg_buf.data.message);
 
-    msg_buf.msg_type = client_id;
+    msg_buf.msg_type = INT_MAX;
+    msg_buf.data.client_id = client_id;
     msg_buf.data.operation = '2';
 
     if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
@@ -112,7 +117,7 @@ void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_b
     {
         while (1)
         {
-            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1)
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), client_id, 0) == -1)
             {
                 printf("[Client: File Search] Error while receiving message from the files search server\n");
             }
@@ -143,12 +148,13 @@ void server_file_search(int msg_queue_id, int client_id, struct msg_buffer msg_b
  * @brief The function to contact the File Word Count Server
  *
  */
-void server_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
+void client_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_buf)
 {
     printf("Enter the filename: ");
     scanf("%s", msg_buf.data.message);
 
-    msg_buf.msg_type = client_id;
+    msg_buf.msg_type = INT_MAX;
+    msg_buf.data.client_id = client_id;
     msg_buf.data.operation = '3';
 
     if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
@@ -160,7 +166,7 @@ void server_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_bu
     {
         while (1)
         {
-            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), msg_buf.msg_type, 0) == -1)
+            if (msgrcv(msg_queue_id, &msg_buf, sizeof(msg_buf.data), client_id, 0) == -1)
             {
                 printf("[Client: Word Count] Error while receiving message from the files word count server\n");
             }
@@ -191,7 +197,7 @@ void server_word_count(int msg_queue_id, int client_id, struct msg_buffer msg_bu
  * @brief The function to exit the client
  *
  */
-void server_exit()
+void client_exit()
 {
 }
 
@@ -213,7 +219,7 @@ int main()
     struct msg_buffer message;
 
     // Generate key for the message queue
-    while ((key = ftok("README.md", 'B')) == -1)
+    while ((key = ftok(".", 'B')) == -1)
     {
         printf("Error while generating key of the file");
         exit(EXIT_FAILURE);
@@ -249,15 +255,15 @@ int main()
 
         if (input == 1)
         {
-            server_ping(msg_queue_id, client_id, message);
+            client_ping(msg_queue_id, client_id, message);
         }
         else if (input == 2)
         {
-            server_file_search(msg_queue_id, client_id, message);
+            client_file_search(msg_queue_id, client_id, message);
         }
         else if (input == 3)
         {
-            server_word_count(msg_queue_id, client_id, message);
+            client_word_count(msg_queue_id, client_id, message);
         }
         else if (input == 4)
         {
