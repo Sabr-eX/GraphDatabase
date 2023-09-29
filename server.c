@@ -151,22 +151,23 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
 }
 
 /**
- * @brief File Word Count Server: Uses 'wc' function to get output.
+ * @brief File Word Count Server: Uses 'wc' function to get output. This function counts words in a file and sends the result to the client.
  *
  */
 void word_count(const char *filename, int msg_queue_id, int client_id, struct msg_buffer msg)
 {
-    int link[2];
-    pid_t pid;
-    char output[4096];
+    int link[2]; //array for file descriptors
+    pid_t pid; //process id
+    char output[4096]; //buffer to store output of 'wc'
 
-    if (pipe(link) == -1)
+
+    if (pipe(link) == -1) //pipe creation
     {
         fprintf(stderr, "%s\n", "[Child Process: File Search] Error in pipe creation");
         exit(EXIT_FAILURE);
     }
 
-    if ((pid = fork()) == -1)
+    if ((pid = fork()) == -1) //fork a new process
     {
         fprintf(stderr, "%s\n", "[Child Process: File Search] Error in fork creation");
         exit(EXIT_FAILURE);
@@ -175,12 +176,12 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
     if (pid == 0)
     {
         // Child process
-        dup2(link[1], STDOUT_FILENO);
-        close(link[0]);
-        close(link[1]);
+        dup2(link[1], STDOUT_FILENO); //redirect stdout to write end of pipe
+        close(link[0]); //close read end not needed
+        close(link[1]); //close write end redirected
         fprintf(stderr, "[Child Process: File Search] Entered filename: %s\n", filename);
 
-        // Use the 'wc' command to count words in the file
+        // Use'wc' command to count words in the file
         execlp("wc", "wc", "-w", filename, NULL);
 
         fprintf(stderr, "%s\n", "Error in execl");
@@ -189,11 +190,10 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
     else
     {
         // Parent process
-        // Wait for the child process to terminate
+        // Wait for child process to terminate
         waitpid(pid, NULL, 0);
-
-        close(link[1]);
-        int nbytes = read(link[0], output, sizeof(output));
+        close(link[1]); //close write end not needed
+        int nbytes = read(link[0], output, sizeof(output)); //read wc output from read end
         // fprintf(stderr, "Output of wc: (%.*s)\n", nbytes, output);
 
         if (nbytes < 0)
@@ -215,7 +215,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         msg.data.client_id = client_id;
         msg.data.operation = 'r';
 
-        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) //send message 
         {
             perror("[Child Process: File Search] Message could not be sent, please try again");
             exit(EXIT_FAILURE);
