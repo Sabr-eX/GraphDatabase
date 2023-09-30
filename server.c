@@ -22,6 +22,9 @@
 #include <limits.h>
 
 #define MESSAGE_LENGTH 100
+#define SERVER_RECEIVES_ON_CHANNEL 1
+#define WRITE_END_OF_PIPE 1
+#define READ_END_OF_PIPE 0
 
 struct data
 {
@@ -37,13 +40,20 @@ struct msg_buffer
 };
 
 /**
+Here we use data struct which keeps track of which operation is being performed. 1 stands for ping,
+2 stands for file search, 3 stands for within file search and 4 starts of cleanup. Here the important
+part is r. r stands for reply. When the server is replying to a client it uses r to ensure it doesn't
+get mixed up by anything else. We also faced major issues while trying to use wait() since forgetting
+wait leads to race conditions and it calling itself for an infinite number of times.
+*/
+
+/**
  * @brief Ping Server: Sends back hello to the client
  *
  */
 void ping(int msg_queue_id, int client_id, struct msg_buffer msg)
 {
     printf("[Child Process: Ping] Message received from Client %d-Operation %c -> %s\n", client_id, msg.data.operation, msg.data.message);
-    sleep(5);
     printf("[Child Process: Ping] Sending message back to the client...\n");
 
     // We send back hello
@@ -83,48 +93,58 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
     // Read the filename from user input
     char output[4096];
 
+    // We create pipe first
     if (pipe(link) == -1)
     {
-        fprintf(stderr, "%s\n", "[Child Process: File Search] Error in pipe creation");
+        perror("[Child Process: File Search] Error in pipe creation");
         exit(EXIT_FAILURE);
     }
-
+    // We fork a new process
     if ((pid = fork()) == -1)
     {
-        fprintf(stderr, "%s\n", "[Child Process: File Search] Error in fork creation");
+        perror("[Child Process: File Search] Error in fork creation");
         exit(EXIT_FAILURE);
     }
 
     if (pid == 0)
     {
         // Child process
-        dup2(link[1], STDOUT_FILENO);
-        close(link[0]);
-        close(link[1]);
+        dup2(link[WRITE_END_OF_PIPE], STDOUT_FILENO);
+        close(link[READ_END_OF_PIPE]);
+        close(link[WRITE_END_OF_PIPE]);
+
+        // We print the filename to std error because dup2 has connected stdout to write end of pipe
         fprintf(stderr, "[Child Process: File Search] Entered filename: %s\n", filename);
 
         // use the find command to check file names
         execlp("find", "find", ".", "-name", filename, NULL);
 
+        // If the execlp fails then we print the error
         fprintf(stderr, "%s\n", "Error in execlp");
+
         exit(EXIT_FAILURE);
     }
     else
     {
         // Parent process
+
         // First wait for the child process to terminate
         waitpid(pid, NULL, 0);
 
-        close(link[1]);
-        int nbytes = read(link[0], output, sizeof(output));
-        fprintf(stderr, "[Child Process: File Search] Output of find: (%.*s)\n", nbytes, output);
+        close(link[WRITE_END_OF_PIPE]);
 
-        if (nbytes < 0)
+        // we find the number of bytes first
+        int numberOfBytes = read(link[READ_END_OF_PIPE], output, sizeof(output));
+
+        // We use .* to restrict the size of input
+        fprintf(stderr, "[Child Process: File Search] Output of find: (%.*s)\n", numberOfBytes, output);
+
+        if (numberOfBytes < 0)
         {
             perror("[Child Process: File Search] Error in reading from pipe");
         }
 
-        if (nbytes < 1)
+        if (numberOfBytes < 1)
         {
             strcpy(msg.data.message, "File not found\n");
         }
@@ -146,28 +166,29 @@ void file_search(const char *filename, int msg_queue_id, int client_id, struct m
         {
             fprintf(stderr, "[Child Process: File Word] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
+        close(link[READ_END_OF_PIPE]);
         exit(EXIT_SUCCESS);
     }
 }
 
 /**
- * @brief File Word Count Server: Uses 'wc' function to get output. This function counts words in a file and sends the result to the client.
+ * @brief File Word Count Server: Uses 'wc' function to get output.
+ * This function counts words in a file and sends the result to the client.
  *
  */
 void word_count(const char *filename, int msg_queue_id, int client_id, struct msg_buffer msg)
 {
-    int link[2]; //array for file descriptors
-    pid_t pid; //process id
-    char output[4096]; //buffer to store output of 'wc'
+    int link[2];       // array for file descriptors
+    pid_t pid;         // process id
+    char output[4096]; // buffer to store output of 'wc'
 
-
-    if (pipe(link) == -1) //pipe creation
+    if (pipe(link) == -1) // pipe creation
     {
         fprintf(stderr, "%s\n", "[Child Process: File Search] Error in pipe creation");
         exit(EXIT_FAILURE);
     }
 
-    if ((pid = fork()) == -1) //fork a new process
+    if ((pid = fork()) == -1) // fork a new process
     {
         fprintf(stderr, "%s\n", "[Child Process: File Search] Error in fork creation");
         exit(EXIT_FAILURE);
@@ -176,9 +197,9 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
     if (pid == 0)
     {
         // Child process
-        dup2(link[1], STDOUT_FILENO); //redirect stdout to write end of pipe
-        close(link[0]); //close read end not needed
-        close(link[1]); //close write end redirected
+        dup2(link[WRITE_END_OF_PIPE], STDOUT_FILENO); // redirect stdout to write end of pipe
+        close(link[READ_END_OF_PIPE]);                // close read end not needed
+        close(link[WRITE_END_OF_PIPE]);               // close write end redirected
         fprintf(stderr, "[Child Process: File Search] Entered filename: %s\n", filename);
 
         // Use'wc' command to count words in the file
@@ -192,17 +213,18 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         // Parent process
         // Wait for child process to terminate
         waitpid(pid, NULL, 0);
-        close(link[1]); //close write end not needed
-        int nbytes = read(link[0], output, sizeof(output)); //read wc output from read end
-        // fprintf(stderr, "Output of wc: (%.*s)\n", nbytes, output);
+        close(link[WRITE_END_OF_PIPE]); // close write end not needed
 
-        if (nbytes < 0)
+        int numberOfBytes = read(link[READ_END_OF_PIPE], output, sizeof(output)); // read wc output from read end
+        // fprintf(stderr, "Output of wc: (%.*s)\n", numberOfBytes, output);
+
+        if (numberOfBytes < 0)
         {
             perror("[Child Process: File Search] Error in reading from pipe");
         }
 
         int wordCount = 0;
-        if (nbytes > 0)
+        if (numberOfBytes > 0)
         {
             sscanf(output, "%d", &wordCount);
         }
@@ -215,7 +237,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         msg.data.client_id = client_id;
         msg.data.operation = 'r';
 
-        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) //send message 
+        if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1) // send message
         {
             perror("[Child Process: File Search] Message could not be sent, please try again");
             exit(EXIT_FAILURE);
@@ -224,7 +246,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
         {
             fprintf(stderr, "[Child Process: File Search] Message '%s' sent back to client %d successfully\n", msg.data.message, client_id);
         }
-
+        close(link[READ_END_OF_PIPE]);
         exit(EXIT_SUCCESS);
     }
 }
@@ -235,7 +257,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
  */
 void cleanup(int msg_queue_id)
 {
-    int wstatus;  //to store the exit status of a process
+    int wstatus; // to store the exit status of a process
     pid_t w;
 
     while (wait(NULL) > 0)
@@ -324,7 +346,7 @@ int main()
     // Listen to the message queue for new requests from the clients
     while (1)
     {
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), INT_MAX, 0) == -1)
+        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), SERVER_RECEIVES_ON_CHANNEL, 0) == -1)
         {
             perror("[Server] Error while receiving message from the client");
             exit(EXIT_FAILURE);
@@ -350,7 +372,7 @@ int main()
                 }
             }
             else
-            {   // Executing the respective fuctions if a message has been received
+            { // Executing the respective fuctions if a message has been received
                 printf("[Server] Creating new child process for the new request received\n");
                 temporary_pid = fork();
                 if (temporary_pid < 0)

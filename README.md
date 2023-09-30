@@ -4,24 +4,6 @@ Hello guys, this file has nothing to do with how the application actually functi
 
 [ftok](https://man7.org/linux/man-pages/man3/ftok.3.html) - convert a pathname and a project identifier to a System V IPC key.
 
-Then we make the queue system itself. Our message structure is defined as the following:
-
-```c
-struct data
-{
-    char message[MESSAGE_LENGTH];
-    char operation;
-};
-
-struct msg_buffer
-{
-    long msg_type;
-    struct data data;
-};
-```
-
-Here we use data struct which keeps track of which operation is being performed. 1 stands for ping, 2 stands for file search, 3 stands for within file search and 4 starts of cleanup. Here the important part is r. r stands for reply. When the server is replying to a client it uses r to ensure it doesn't get mixed up by anything else. We also faced major issues while trying to use wait() since forgetting wait leads to race conditions and it calling itself for an infinite number of times.
-
 ## PROBLEM STATEMENT:
 
 In this Assignment we are going to use the different concepts learnt so far like Linux commands, process creation, inter-process communication, wait() and exec(). The problem statement of the Assignment consists of the following parts.

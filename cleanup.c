@@ -21,6 +21,7 @@
 #include <limits.h>
 
 #define MESSAGE_LENGTH 100
+#define SERVER_RECEIVES_ON_CHANNEL 1
 
 /**
  * @brief The buffer structure for the message queue
@@ -39,13 +40,21 @@ struct msg_buffer
 };
 
 /**
+Here we use data struct which keeps track of which operation is being performed. 1 stands for ping,
+2 stands for file search, 3 stands for within file search and 4 starts of cleanup. Here the important
+part is r. r stands for reply. When the server is replying to a client it uses r to ensure it doesn't
+get mixed up by anything else. We also faced major issues while trying to use wait() since forgetting
+wait leads to race conditions and it calling itself for an infinite number of times.
+*/
+
+/**
  * @brief The function to contact the Main Server and instruct it to terminate gracefully
  * In this function, the cleanup process will send a message to the Main Server
  * and terminate itself. We will set operation to 4 to indicate that we wish to terminate
  * and set the msg_type to INT_MAX
  */
 void clean(int msg_queue_id, struct msg_buffer msg_buf)
-{   
+{
     // Asking for the user's approval to terminate
     while (1)
     {
@@ -54,7 +63,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
         scanf("%s", &x);
         if (x == 'Y' || x == 'y')
         {
-            msg_buf.msg_type = INT_MAX;
+            msg_buf.msg_type = SERVER_RECEIVES_ON_CHANNEL;
             msg_buf.data.operation = '4';
             msg_buf.data.client_id = 0;
             msg_buf.data.message[0] = '\0';
@@ -95,7 +104,7 @@ int main()
     }
 
     // Connect to the messsage queue
-    while ((msg_queue_id = msgget(key, 0644 | IPC_CREAT)) == -1)
+    while ((msg_queue_id = msgget(key, 0644)) == -1)
     {
         printf("Error while connecting with Message Queue");
         exit(EXIT_FAILURE);
