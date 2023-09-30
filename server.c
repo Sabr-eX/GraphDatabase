@@ -235,7 +235,7 @@ void word_count(const char *filename, int msg_queue_id, int client_id, struct ms
  */
 void cleanup(int msg_queue_id)
 {
-    int wstatus;
+    int wstatus;  //to store the exit status of a process
     pid_t w;
 
     while (wait(NULL) > 0)
@@ -350,7 +350,7 @@ int main()
                 }
             }
             else
-            {
+            {   // Executing the respective fuctions if a message has been received
                 printf("[Server] Creating new child process for the new request received\n");
                 temporary_pid = fork();
                 if (temporary_pid < 0)
