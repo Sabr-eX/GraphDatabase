@@ -22,6 +22,9 @@
 
 #define MESSAGE_LENGTH 100
 
+/**
+ * @brief The buffer structure for the message queue
+ */
 struct data
 {
     char message[MESSAGE_LENGTH];
@@ -35,8 +38,15 @@ struct msg_buffer
     struct data data;
 };
 
+/**
+ * @brief The function to contact the Main Server and instruct it to terminate gracefully
+ * In this function, the cleanup process will send a message to the Main Server
+ * and terminate itself. We will set operation to 4 to indicate that we wish to terminate
+ * and set the msg_type to INT_MAX
+ */
 void clean(int msg_queue_id, struct msg_buffer msg_buf)
-{
+{   
+    // Asking for the user's approval to terminate
     while (1)
     {
         printf("Do you want the server to terminate? Press Y for 'Yes' and N for 'No': ");
@@ -49,6 +59,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
             msg_buf.data.client_id = 0;
             msg_buf.data.message[0] = '\0';
 
+            // Sending a message to the message queue if the user wishes to exit
             if (msgsnd(msg_queue_id, &msg_buf, sizeof(msg_buf.data), 0) == -1)
             {
                 printf("[Cleanup] Message could not be sent, please try again\n");
@@ -69,8 +80,8 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
 int main()
 {
 
-    // Initialize the client
-    printf("Initializing Client...\n");
+    // Initialize the cleanup process
+    printf("Initializing Cleanup process...\n");
 
     key_t key;
     int msg_queue_id;
