@@ -95,8 +95,7 @@ message queue. Once this is received, the client deletes the shared memory segme
 -   The load balancer receives the client requests via the single message queue.
 -   This message queue should only be created by the load balancer.
 -   It sends the odd numbered requests to secondary server 1 and the even numbered requests to secondary server 2 via the single message queue.
--   These numbers are as per the Sequence_Number of the requests as
-    discussed above.
+-   These numbers are as per the Sequence_Number of the requests as discussed above.
 
 ## PRIMARY SERVER:
 
@@ -196,10 +195,8 @@ Multiple read operations can be performed on the same graph file simultaneously.
 -   The shared memory segments should be created by the corresponding clients. A client creates
     separate shared memory segments for each request. Once the request is serviced, the client destroys
     the shared memory segment.
--   It is assumed that a client after sending a request, waits for the servicing of that request to complete
-    before sending any further requests. However, multiple clients can send requests simultaneously.
--   It is assumed that no client will send any request before the load balancer and the servers start executing. Assume that - No client is terminated while it has a pending request. Clients will be terminated by pressing
-    Ctrl+C.
+-   It is assumed that a client after sending a request, waits for the servicing of that request to complete before sending any further requests. However, multiple clients can send requests simultaneously.
+-   It is assumed that no client will send any request before the load balancer and the servers start executing. Assume that - No client is terminated while it has a pending request. Clients will be terminated by pressing Ctrl+C.
 -   None of the servers are terminated in the midst of executing client requests and while there
     are pending client requests.
 -   The load balancer will not be terminated during servicing of client requests and while there are pending client requests.

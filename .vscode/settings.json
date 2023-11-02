@@ -38,6 +38,9 @@
         "leapc.h": "c",
         "xstring": "cpp",
         "string": "cpp",
-        "fcntl.h": "c"
+        "*.asm": "mips",
+        "fcntl.h": "c",
+        "stdlib.h": "c",
+        "types.h": "c"
     }
 }
