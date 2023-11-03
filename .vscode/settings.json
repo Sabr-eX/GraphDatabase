@@ -41,6 +41,7 @@
         "*.asm": "mips",
         "fcntl.h": "c",
         "stdlib.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "ipc.h": "c"
     }
 }

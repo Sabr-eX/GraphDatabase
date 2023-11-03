@@ -20,7 +20,7 @@
 #include <limits.h>
 
 #define MESSAGE_LENGTH 100
-#define LOAD_BALANCER_RECEIVES_ON_CHANNEL 1
+#define LOAD_BALANCER_CHANNEL 1
 #define PRIMARY_SERVER_CHANNEL 2
 #define SECONDARY_SERVER_CHANNEL 3
 
@@ -43,7 +43,9 @@ struct msg_buffer
  */
 void cleanup(int msg_queue_id)
 {
-    int wstatus; // to store the exit status of a process
+    // TODO: Will have to ask primary and secondary servers to terminate
+    // Store the exit status of a process
+    int wstatus;
     pid_t w;
 
     while (wait(NULL) > 0)
@@ -132,7 +134,7 @@ int main()
     // Listen to the message queue for new requests from the clients
     while (1)
     {
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), LOAD_BALANCER_RECEIVES_ON_CHANNEL, 0) == -1)
+        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), LOAD_BALANCER_CHANNEL, 0) == -1)
         {
             perror("[Load Balancer] Error while receiving message from the client");
             exit(EXIT_FAILURE);
@@ -145,14 +147,21 @@ int main()
                 cleanup(msg_queue_id);
                 exit(EXIT_SUCCESS);
             }
-            // Check for sequence number is odd or even
-            if (msg.data.seq_num % 2 == 0)
+            else if (msg.data.operation == 1 || msg.data.operation == 2)
             {
-                // Secondary Server 2
+                // Primary server
             }
-            else
+            else if (msg.data.operation == 3 || msg.data.operation == 4)
             {
-                // Secondary Server 1
+                // Check for sequence number is odd or even
+                if (msg.data.seq_num % 2 == 0)
+                {
+                    // Secondary Server 2
+                }
+                else
+                {
+                    // Secondary Server 1
+                }
             }
         }
     }

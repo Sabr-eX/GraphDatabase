@@ -20,7 +20,7 @@
 #include <limits.h>
 
 #define MESSAGE_LENGTH 100
-#define LOAD_BALANCER_RECEIVES_ON_CHANNEL 1
+#define LOAD_BALANCER_CHANNEL 1
 #define PRIMARY_SERVER_CHANNEL 2
 #define SECONDARY_SERVER_CHANNEL 3
 
@@ -38,7 +38,7 @@ struct msg_buffer
 };
 
 /**
- * @brief The function to contact the Main Server and instruct it to terminate gracefully
+ * @brief The function to contact the load balancer and instruct it to terminate gracefully
  * In this function, the cleanup process will send a message to the Main Server
  * and terminate itself. We will set operation to 5 to indicate that we wish to terminate
  * and set the msg_type to 1
@@ -53,7 +53,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
         scanf("%s", &x);
         if (x == 'Y' || x == 'y')
         {
-            msg_buf.msg_type = LOAD_BALANCER_RECEIVES_ON_CHANNEL;
+            msg_buf.msg_type = LOAD_BALANCER_CHANNEL;
             msg_buf.data.operation = 5;
 
             // Sending a message to the message queue if the user wishes to exit
