@@ -57,9 +57,13 @@ Each client displays the following menu options.
 
 -   Options 1 and 2 are write operations (to be performed by the primary server) and options 3 and 4 are
     read operations (to be performed by the secondary servers).
--   For option 2, addition and/or deletion of
-    nodes and/or edges can be requested by the client.
--   Each client uses the following 3-tuple format for sending the request to the load balancer via the message queue: `<Sequence_Number Operation_Number Graph_File_Name>`. Sequence_Number will start from 1 and will keep on increasing monotonically till 100 for all the client requests sent across all the servers. This Sequence_Number corresponds to the request number mentioned earlier. **It is guaranteed that the Sequence_Number associated with each client request will be unique.** Operation_Number will be specified as per the menu options mentioned above. The client prompts the user to enter the Sequence_Number, Operation_Number and Graph_File_Name by displaying a prompt as follows:
+-   For option 2, addition and/or deletion of nodes and/or edges can be requested by the client.
+-   Each client uses the following 3-tuple format for sending the request to the load balancer via the message queue: `<Sequence_Number Operation_Number Graph_File_Name>`.
+-   Sequence_Number will start from 1 and will keep on increasing monotonically till 100 for all the client requests sent across all the servers.
+-   This Sequence_Number corresponds to the request number mentioned earlier.
+    **It is guaranteed that the Sequence_Number associated with each client request will be unique.**
+-   Operation_Number will be specified as per the menu options mentioned above.
+-   The client prompts the user to enter the Sequence_Number, Operation_Number and Graph_File_Name by displaying a prompt as follows:
 
 ```
 1. Enter Sequence Number
