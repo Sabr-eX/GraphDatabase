@@ -16,13 +16,15 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <limits.h>
 
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 1
 #define PRIMARY_SERVER_CHANNEL 2
-#define SECONDARY_SERVER_CHANNEL 3
+#define SECONDARY_SERVER_CHANNEL_1 3
+#define SECONDARY_SERVER_CHANNEL_2 4
 
 struct data
 {
@@ -44,56 +46,12 @@ struct msg_buffer
 void cleanup(int msg_queue_id)
 {
     // TODO: Will have to ask primary and secondary servers to terminate
-    // Store the exit status of a process
-    int wstatus;
-    pid_t w;
-
-    while (wait(NULL) > 0)
-    {
-    }
-
-    do
-    {
-        w = wait(&wstatus);
-
-        if (w == -1)
-        {
-            // This would mean there is no child
-            perror("[Load Balancer - Cleanup] Waitpid");
-
-            // Destroy the message queue
-            while (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
-            {
-                perror("[Load Balancer - Cleanup] Error while destroying the message queue");
-            }
-
-            exit(EXIT_FAILURE);
-        }
-
-        if (WIFEXITED(wstatus))
-        {
-            printf("[Load Balancer - Cleanup] Exited using status=%d\n", WEXITSTATUS(wstatus));
-        }
-        else if (WIFSIGNALED(wstatus))
-        {
-            printf("[Load Balancer - Cleanup] Killed using signal %d\n", WTERMSIG(wstatus));
-        }
-        else if (WIFSTOPPED(wstatus))
-        {
-            printf("[Load Balancer - Cleanup] Stopped using signal %d\n", WSTOPSIG(wstatus));
-        }
-        else if (WIFCONTINUED(wstatus))
-        {
-            printf("[Load Balancer - Cleanup] Process still continuing\n");
-        }
-    } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
 
     // Destroy the message queue
     while (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
     {
         perror("[Load Balancer] Error while destroying the message queue");
     }
-
     exit(EXIT_SUCCESS);
 }
 
@@ -150,17 +108,34 @@ int main()
             else if (msg.data.operation == 1 || msg.data.operation == 2)
             {
                 // Primary server
+                printf("[Load Balancer] Received a message from Client and Sending it to Primary Server\n");
+                msg.msg_type = PRIMARY_SERVER_CHANNEL;
+                if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+                {
+                    perror("[Load Balancer] Error while sending message to Primary Server");
+                }
             }
             else if (msg.data.operation == 3 || msg.data.operation == 4)
             {
                 // Check for sequence number is odd or even
+                printf("[Load Balancer] Received a message from Client and Sending it to Secondary Server\n");
                 if (msg.data.seq_num % 2 == 0)
                 {
                     // Secondary Server 2
+                    msg.msg_type = SECONDARY_SERVER_CHANNEL_2;
+                    if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+                    {
+                        perror("[Load Balancer] Error while sending message to Secondary Server 2");
+                    }
                 }
                 else
                 {
                     // Secondary Server 1
+                    msg.msg_type = SECONDARY_SERVER_CHANNEL_1;
+                    if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+                    {
+                        perror("[Load Balancer] Error while sending message to Secondary Server 1");
+                    }
                 }
             }
         }
