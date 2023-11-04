@@ -86,6 +86,7 @@ int main()
     // This is being done to ensure that the client_id is unique and cannot be 0,1,2,3,4
     // because these are being used already
     client_id += 4;
+    printf("[Client] Your assigned Client ID: %d\n", client_id);
 
     // Display the menu
     while (1)

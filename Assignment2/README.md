@@ -1,16 +1,11 @@
-# OPERATING SYSTEMS (CS F372) 2023-2024 ASSIGNMENT 2
-
-MAX MARKS: 45 | DEADLINE: 17th NOVEMBER 2023, 11:59 PM (HARD DEADLINE)
+# OPERATING SYSTEMS (CS F372) 2023-2024 ASSIGNMENT 2 - 45 Marks
 
 ## PROBLEM STATEMENT:
 
 In this assignment, you will simulate an application for a distributed graph database system involving a load balancer process, a primary server process, two secondary server processes (secondary server 1 and secondary server 2), a cleanup process and several clients. The overall system architecture is shown below.
 
-The overall workflow is as follows:
-
 -   Clients send requests (read or write) to the load balancer.
--   Load balancer forwards the write requests to the primary server. Load balancer forwards the odd numbered read requests to secondary server 1 and the even
-    numbered read requests to secondary server 2. Request numbering starts from 1.
+-   Load balancer forwards the write requests to the primary server. Load balancer forwards the odd numbered read requests to secondary server 1 and the even numbered read requests to secondary server 2. Request numbering starts from 1.
 -   On receiving a request from the load balancer, the server (primary or secondary) creates a new thread
     to process the request. Once the processing is complete, this thread (not the server process) sends a
     message or an output back to the client.
@@ -81,8 +76,7 @@ the following prompt:
 
 ```
 Enter number of nodes of the graph
-Enter adjacency matrix, each row on a separate line and elements of a
-single row separated by whitespace characters
+Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters
 ```
 
 For a read operation, the client specifies the starting vertex for the BFS/DFS traversal. The client writes
@@ -122,8 +116,7 @@ message queue. Once this is received, the client deletes the shared memory segme
 
 -   The read operations are handled by the secondary servers.
 -   Each secondary server spawns a new thread to handle a client request.
--   Each BFS or DFS traversal needs to be implemented using multithreading and you can assume
-    that for these operations, the clients will choose only acyclic graphs.
+-   Each BFS or DFS traversal needs to be implemented using multithreading and you can assume that for these operations, the clients will choose only acyclic graphs.
 -   The client will have specified a starting vertex for either type of traversals via a shared memory
     segment. The secondary server thread will read this vertex from the shared memory segment.
 -   While processing a client request for DFS, the secondary server thread creates a new thread
@@ -154,8 +147,8 @@ message queue. Once this is received, the client deletes the shared memory segme
 
 ## CLEANUP PROCESS:
 
-The cleanup process keeps running along with the clients, the load balancer and
-the servers. - The cleanup process keeps displaying a menu as:
+-   The cleanup process keeps running along with the clients, the load balancer and
+    the servers. - The cleanup process keeps displaying a menu as:
 
 `Want to terminate the application? Press Y (Yes) or N (No)`
 
@@ -174,7 +167,7 @@ the servers. - The cleanup process keeps displaying a menu as:
 
 ## HANDLING CONCURRENT CLIENT REQUESTS:
 
-Multiple read operations can be performed on the same graph file simultaneously. However, you need to be careful about simultaneous write operations as well as simultaneous read and write operations on the same graph file. Such conflicting operations have to be performed serially. You have to ensure this by using either semaphore or mutex. You need to use some locking mechanism on the graph files. You are free to use any synchronization construct between semaphore or mutex.
+-   Multiple read operations can be performed on the same graph file simultaneously. However, you need to be careful about simultaneous write operations as well as simultaneous read and write operations on the same graph file. Such conflicting operations have to be performed serially. You have to ensure this by using either semaphore or mutex. You need to use some locking mechanism on the graph files. You are free to use any synchronization construct between semaphore or mutex.
 
 **Tip: For handling inter-process synchronization, you can explore using Named Semaphore. However, you are free to design your own solution to the critical section problem.**
 
