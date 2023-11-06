@@ -27,6 +27,7 @@
 
 struct data
 {
+    long client_id;
     long seq_num;
     long operation;
     char graph_name[MESSAGE_LENGTH];

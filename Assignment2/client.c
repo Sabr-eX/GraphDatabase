@@ -28,6 +28,7 @@
 
 struct data
 {
+    long client_id;
     long seq_num;
     long operation;
     char graph_name[MESSAGE_LENGTH];
@@ -87,6 +88,7 @@ int main()
     // because these are being used already
     client_id += 4;
     printf("[Client] Your assigned Client ID: %d\n", client_id);
+    message.data.client_id = client_id;
 
     // Display the menu
     while (1)
@@ -114,6 +116,30 @@ int main()
 
         if (operation == 1)
         {
+            // Input number of nodes
+            int number_of_nodes;
+            printf("Enter Number of Nodes: ");
+            scanf("%d", &number_of_nodes);
+
+            // Input adjacency matrix
+            int adjacency_matrix[number_of_nodes][number_of_nodes];
+            printf("Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters: \n");
+            for (int i = 0; i < number_of_nodes; i++)
+            {
+                for (int j = 0; j < number_of_nodes; j++)
+                {
+                    scanf("%d", &adjacency_matrix[i][j]);
+                }
+            }
+
+            // Connect to shared memory
+            int shm_id;
+            if ((shm_id = shmget(key, sizeof(shm), 0666 | IPC_CREAT)) == -1)
+            {
+                printf("Error occurred while connecting to shm\n");
+                return -1;
+            }
+
             message.msg_type = LOAD_BALANCER_CHANNEL;
             message.data.operation = 1;
             message.data.seq_num = seq_num;

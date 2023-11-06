@@ -27,6 +27,7 @@
 
 struct data
 {
+    long client_id;
     long seq_num;
     long operation;
     char graph_name[MESSAGE_LENGTH];
@@ -37,6 +38,16 @@ struct msg_buffer
     long msg_type;
     struct data data;
 };
+
+/**
+ * @brief This function is executed by the thread which is responsible for writing to the new graph file
+ *
+ * @param arg
+ * @return void**
+ */
+void **writeToNewGraphFile(void **arg)
+{
+}
 
 /**
  * @brief The Primary Server is responsible all the write operations
@@ -76,7 +87,7 @@ int main()
     {
         if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), PRIMARY_SERVER_CHANNEL, 0) == -1)
         {
-            perror("[Load Balancer] Error while receiving message from the client");
+            perror("[Primary Server] Error while receiving message from the client");
             exit(EXIT_FAILURE);
         }
         else

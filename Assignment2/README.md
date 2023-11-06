@@ -67,8 +67,7 @@ Each client displays the following menu options.
 ```
 
 Graph_File_Name will be a new file name for option 1 and an existing file name for the remaining
-options. You can assume that the client will not deliberately send an existing file name for option 1 and
-a non-existent file name for options 2, 3 and 4. Additionally, for a write operation, the client after
+options. **You can assume that the client will not deliberately send an existing file name for option 1 and a non-existent file name for options 2, 3 and 4**. Additionally, for a write operation, the client after
 sending the 3-tuple request to the load balancer, writes the number of nodes of the graph (new or the
 modified one) and the corresponding adjacency matrix to a shared memory segment. The client
 prompts the user to enter the information to be written to the shared memory segment by displaying
@@ -184,19 +183,10 @@ message queue. Once this is received, the client deletes the shared memory segme
 -   In case of any potential starvation, you can avoid the situation by processing client requests in
     increasing order of Sequence_Number. However, you should ensure that non-conflicting requests
     are processed concurrently.
--   All IPC mechanisms are to be implemented as mentioned above in the problem statement. You
-    should only use a single message queue in the entire assignment. The message queue based
-    communications are to be done using message queues only. The shared memory based
-    communications are to be done using shared memory segments only.
--   The message queue should be created and deleted only by the load balancer process.
 -   The shared memory segments should be created by the corresponding clients. A client creates
     separate shared memory segments for each request. Once the request is serviced, the client destroys
     the shared memory segment.
 -   It is assumed that a client after sending a request, waits for the servicing of that request to complete before sending any further requests. However, multiple clients can send requests simultaneously.
--   It is assumed that no client will send any request before the load balancer and the servers start executing. Assume that - No client is terminated while it has a pending request. Clients will be terminated by pressing Ctrl+C.
--   None of the servers are terminated in the midst of executing client requests and while there
-    are pending client requests.
--   The load balancer will not be terminated during servicing of client requests and while there are pending client requests.
 -   Wherever you are using multithreading, you need to make sure that each parent thread waits for
     the children threads to terminate.
 -   You should not create any child process to implement any aspect of the assignment.
@@ -208,4 +198,3 @@ message queue. Once this is received, the client deletes the shared memory segme
 -   For each secondary server, the contents of the shared memory are read by the thread handling the
     client request and the output is sent by that thread to the client and not the main thread of the
     secondary server and also not by the server process itself.
--   You should do proper error handling for the relevant API calls, wherever applicable.
