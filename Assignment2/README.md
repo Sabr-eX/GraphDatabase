@@ -34,33 +34,33 @@ struct msg_buffer
 
 # Task 1: Add a new graph to the Database
 
-1. Create client so that the user can choose the sequence, operation, graph file name
-2. Check that these requests are going to the load balancer and are redirected to the primary server on the loadbalancer and primaryserver channels respectively
-3. Write basic code to check that the primary server receives everything
-4. Ensure that the input is taken from the user for number of nodes and the adjacency matrix itself.
-5. Store this in shared memory in a way that it doesn't clash with other shared memories
-6. Delete this stored memory after the request is completed
-7. The primary server's thread should be able to read this data and you should also keep track of threads so as to ensure that we wait for them before the main thread terminates
-8. And send this data to the new text file
-9. After this send a message back to the client that `File successfully added`
-10. Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
-11. The parent thread should wait for the children threads to terminate
+-   [x] Create client so that the user can choose the sequence, operation, graph file name
+-   [x] Check that these requests are going to the load balancer and are redirected to the primary server on the loadbalancer and primaryserver channels respectively
+-   [x] Write basic code to check that the primary server receives everything
+-   [x] Store this in shared memory in a way that it doesn't clash with other shared memories
+-   [x] Delete this stored memory after the request is completed
+-   [ ] The primary server's thread should be able to read this data and you should also keep track of threads so as to ensure that we wait for them before the main thread terminates
+-   [ ] And send this data to the new text file
+-   [ ] After this send a message back to the client that `File successfully added`
+-   [ ] Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
+-   [ ] The parent thread should wait for the children threads to terminate
 
 # Task 2: Modifying existing graph
-- [ ] Client can request add/delete nodes/edges, so we need to perform write operation for this.
-- [ ] Primary server
-   - [ ] Takes this request
-   - [ ] Creates a new thread
-   - [ ] Reads the contents of shared memory
-   - [ ] Opens the corresponding file
-   - [ ] Updates the file
-   - [ ] Closes the file
-   - [ ] Thread sends `File successfully modified`
-- [ ] Client display the message on console
+
+-   [ ] Client can request add/delete nodes/edges, so we need to perform write operation for this.
+-   [ ] Primary server
+    -   [ ] Takes this request
+    -   [ ] Creates a new thread
+    -   [ ] Reads the contents of shared memory
+    -   [ ] Opens the corresponding file
+    -   [ ] Updates the file
+    -   [ ] Closes the file
+    -   [ ] Thread sends `File successfully modified`
+-   [ ] Client display the message on console
 
 # Cleanup
+
 1. The cleanup process keeps displaying Y or N menu. If Y is given as input, the process informs load balancer via single message queue that the load balancer needs to terminate. After this the cleanup process will terminate.
 2. The load balancer informs all the three servers to terminate via the single message queue, sleeps for 5 seconds, waits for all threads to terminate, deletes the message queue and terminates
 3. The servers perform the relevant cleanup activities and terminate.
-Note that the cleanup process will not force the load balancer to terminate while there are pending client requests. Moreover, the load balancer will not force the servers to terminate in the midst of servicing any client request or while there are pending client requests.
-
+   Note that the cleanup process will not force the load balancer to terminate while there are pending client requests. Moreover, the load balancer will not force the servers to terminate in the midst of servicing any client request or while there are pending client requests.
