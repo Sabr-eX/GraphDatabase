@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/shm.h>
 
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 1
@@ -39,6 +40,10 @@ struct msg_buffer
     long msg_type;
     struct data data;
 };
+
+void operation_one()
+{
+}
 
 /**
  * @brief On execution, each instance of this program creates a separate client process,
@@ -101,13 +106,13 @@ int main()
         printf("4. Perform BFS on an existing graph of the database\n");
         printf("5. Exit\n");
 
-        int seq_num;
-        printf("Enter Sequence Number: ");
-        scanf("%d", &seq_num);
-
         int operation;
         printf("Enter Operation Number: ");
         scanf("%d", &operation);
+
+        int seq_num;
+        printf("Enter Sequence Number: ");
+        scanf("%d", &seq_num);
 
         printf("Enter Graph Name: ");
         scanf("%s", message.data.graph_name);
@@ -116,39 +121,7 @@ int main()
 
         if (operation == 1)
         {
-            // Input number of nodes
-            int number_of_nodes;
-            printf("Enter Number of Nodes: ");
-            scanf("%d", &number_of_nodes);
-
-            // Input adjacency matrix
-            int adjacency_matrix[number_of_nodes][number_of_nodes];
-            printf("Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters: \n");
-            for (int i = 0; i < number_of_nodes; i++)
-            {
-                for (int j = 0; j < number_of_nodes; j++)
-                {
-                    scanf("%d", &adjacency_matrix[i][j]);
-                }
-            }
-
-            // Connect to shared memory
-            int shm_id;
-            if ((shm_id = shmget(key, sizeof(shm), 0666 | IPC_CREAT)) == -1)
-            {
-                printf("Error occurred while connecting to shm\n");
-                return -1;
-            }
-
-            message.msg_type = LOAD_BALANCER_CHANNEL;
-            message.data.operation = 1;
-            message.data.seq_num = seq_num;
-
-            if (msgsnd(msg_queue_id, &message, sizeof(message.data), 0) == -1)
-            {
-                perror("[Client: Op 1] Message could not be sent, please try again");
-                exit(EXIT_FAILURE);
-            }
+            operation_one();
         }
         else if (operation == 2)
         {
