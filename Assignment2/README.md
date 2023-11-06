@@ -45,3 +45,10 @@ struct msg_buffer
 9. After this send a message back to the client that `File successfully added`
 10. Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
 11. The parent thread should wait for the children threads to terminate
+
+# Cleanup
+1. The cleanup process keeps displaying Y or N menu. If Y is given as input, the process informs load balancer via single message queue that the load balancer needs to terminate. After this the cleanup process will terminate.
+2. The load balancer informs all the three servers to terminate via the single message queue, sleeps for 5 seconds, waits for all threads to terminate, deletes the message queue and terminates
+3. The servers perform the relevant cleanup activities and terminate.
+Note that the cleanup process will not force the load balancer to terminate while there are pending client requests. Moreover, the load balancer will not force the servers to terminate in the midst of servicing any client request or while there are pending client requests.
+
