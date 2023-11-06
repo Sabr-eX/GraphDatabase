@@ -108,17 +108,19 @@ int main()
             else if (msg.data.operation == 1 || msg.data.operation == 2)
             {
                 // Primary server
-                printf("[Load Balancer] Received a message from Client and Sending it to Primary Server\n");
                 msg.msg_type = PRIMARY_SERVER_CHANNEL;
                 if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
                 {
                     perror("[Load Balancer] Error while sending message to Primary Server");
                 }
+                else
+                {
+                    printf("[Load Balancer] Received a message from Client and Sent it to Primary Server\n");
+                }
             }
             else if (msg.data.operation == 3 || msg.data.operation == 4)
             {
                 // Check for sequence number is odd or even
-                printf("[Load Balancer] Received a message from Client and Sending it to Secondary Server\n");
                 if (msg.data.seq_num % 2 == 0)
                 {
                     // Secondary Server 2
@@ -127,6 +129,8 @@ int main()
                     {
                         perror("[Load Balancer] Error while sending message to Secondary Server 2");
                     }
+                    else
+                        printf("[Load Balancer] Received a message from Client and Sent it to Secondary Server\n");
                 }
                 else
                 {
@@ -137,6 +141,10 @@ int main()
                         perror("[Load Balancer] Error while sending message to Secondary Server 1");
                     }
                 }
+            }
+            else
+            {
+                printf("[Load Balancer] Invalid Operation\n");
             }
         }
     }

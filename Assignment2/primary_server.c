@@ -76,12 +76,12 @@ int main()
     {
         if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), PRIMARY_SERVER_CHANNEL, 0) == -1)
         {
-            perror("[Primary Server] Error while receiving message from the client");
+            perror("[Load Balancer] Error while receiving message from the client");
             exit(EXIT_FAILURE);
         }
         else
         {
-            printf("%s", msg.data.graph_name);
+            printf("[Primary Server] Received a message from Client: Op: %d File Name: %s\n", msg.data.operation, msg.data.graph_name);
         }
     }
 
