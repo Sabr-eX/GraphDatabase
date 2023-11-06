@@ -18,12 +18,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/shm.h>
+#include <pthread.h>
 
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 1
 #define PRIMARY_SERVER_CHANNEL 2
 #define SECONDARY_SERVER_CHANNEL_1 3
 #define SECONDARY_SERVER_CHANNEL_2 4
+#define MAX_THREADS 200
 
 struct data
 {

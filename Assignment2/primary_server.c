@@ -54,7 +54,7 @@ struct data_to_thread
  * @param arg
  * @return void*
  */
-void *writeToNewGraphFile(void **arg)
+void *writeToNewGraphFile(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
     // On the server side for storing data, we just start with an integer
