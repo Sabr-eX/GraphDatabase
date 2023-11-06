@@ -46,6 +46,18 @@ struct msg_buffer
 10. Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
 11. The parent thread should wait for the children threads to terminate
 
+# Task 2: Modifying existing graph
+- [ ] Client can request add/delete nodes/edges, so we need to perform write operation for this.
+- [ ] Primary server
+   - [ ] Takes this request
+   - [ ] Creates a new thread
+   - [ ] Reads the contents of shared memory
+   - [ ] Opens the corresponding file
+   - [ ] Updates the file
+   - [ ] Closes the file
+   - [ ] Thread sends `File successfully modified`
+- [ ] Client display the message on console
+
 # Cleanup
 1. The cleanup process keeps displaying Y or N menu. If Y is given as input, the process informs load balancer via single message queue that the load balancer needs to terminate. After this the cleanup process will terminate.
 2. The load balancer informs all the three servers to terminate via the single message queue, sleeps for 5 seconds, waits for all threads to terminate, deletes the message queue and terminates
