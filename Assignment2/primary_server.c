@@ -204,6 +204,11 @@ int main()
             else if (msg.data.operation == 2)
             {
                 // Modify an existing file
+                struct data_to_thread dtt;
+                dtt.msg_queue_id = msg_queue_id;
+                dtt.msg = msg;
+                // This method overwrites the file, coz 'w' as read parameter
+                pthread_create(&thread_ids[msg.data.client_id], NULL, writeToNewGraphFile, (void *)&dtt);
             }
             else if (msg.data.operation == 5)
             {

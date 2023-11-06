@@ -210,6 +210,7 @@ int main()
         }
         else if (operation == 2)
         {
+            operation_one(msg_queue_id, client_id, seq_num, message);
         }
         else if (operation == 3)
         {
