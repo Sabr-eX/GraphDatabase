@@ -40,8 +40,8 @@ struct msg_buffer
 -   [x] Store this in shared memory in a way that it doesn't clash with other shared memories
 -   [x] Delete this stored memory after the request is completed
 -   [ ] The primary server's thread should be able to read this data and you should also keep track of threads so as to ensure that we wait for them before the main thread terminates
--   [ ] And send this data to the new text file
--   [ ] After this send a message back to the client that `File successfully added`
+-   [x] And send this data to the new text file
+-   [x] After this send a message back to the client that `File successfully added`
 -   [ ] Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
 -   [ ] The parent thread should wait for the children threads to terminate
 
