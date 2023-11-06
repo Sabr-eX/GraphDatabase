@@ -58,6 +58,20 @@ struct msg_buffer
     -   [ ] Thread sends `File successfully modified`
 -   [ ] Client display the message on console
 
+# Task 3: BFS of the input graph
+
+1. Create client. The user chooses sequence, operation, (graph file name is the same).
+2. Secondary Server Tasks
+    - [] Receive request from load balancer (nodes, adj matrix via message queue)
+    - [] Spawn new thread to handle request
+    - [] Receive starting vertex via shared memory segment
+    - [] Ensure requests are redirected to the appropriate server 
+    - [] Error handling to ensure input is in right format 
+    - [] For each level, perform BFS by creating a new thread for processing the nodes of a particular level. Process nodes concurrently
+    - [] Ensure parents wait for child threads to terminate
+    - [] Check other error handling
+    - [] Return order of vertices traversed via message queue
+    
 # Cleanup
 
 1. The cleanup process keeps displaying Y or N menu. If Y is given as input, the process informs load balancer via single message queue that the load balancer needs to terminate. After this the cleanup process will terminate.
