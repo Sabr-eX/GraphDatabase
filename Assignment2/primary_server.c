@@ -22,15 +22,14 @@
 #include <pthread.h>
 
 #define MESSAGE_LENGTH 100
-#define LOAD_BALANCER_CHANNEL 1
-#define PRIMARY_SERVER_CHANNEL 2
-#define SECONDARY_SERVER_CHANNEL_1 3
-#define SECONDARY_SERVER_CHANNEL_2 4
+#define LOAD_BALANCER_CHANNEL 4000
+#define PRIMARY_SERVER_CHANNEL 4001
+#define SECONDARY_SERVER_CHANNEL_1 4002
+#define SECONDARY_SERVER_CHANNEL_2 4003
 #define MAX_THREADS 200
 
 struct data
 {
-    long client_id;
     long seq_num;
     long operation;
     char graph_name[MESSAGE_LENGTH];
@@ -66,9 +65,9 @@ void *writeToNewGraphFile(void *arg)
     key_t shm_key;
     int shm_id;
     // Generate key for the shared memory
-    // Here, we are using the client_id as the key because
-    // we want to ensure that each client has a unique shared memory
-    while ((shm_key = ftok(".", dtt->msg.data.client_id)) == -1)
+    // Here, we are using the seq_name as the key because
+    // we want to ensure that each request has a unique shared memory
+    while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
     {
         perror("[Primary Server] Error while generating key for shared memory");
         exit(EXIT_FAILURE);
@@ -128,7 +127,7 @@ void *writeToNewGraphFile(void *arg)
     printf("[Primary Server] Successfully written to the file %s\n", filename);
 
     // Send reply to the client
-    dtt->msg.msg_type = dtt->msg.data.client_id;
+    dtt->msg.msg_type = dtt->msg.data.seq_num;
     dtt->msg.data.operation = 0;
     if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
     {
@@ -199,7 +198,7 @@ int main()
                 struct data_to_thread dtt;
                 dtt.msg_queue_id = msg_queue_id;
                 dtt.msg = msg;
-                pthread_create(&thread_ids[msg.data.client_id], NULL, writeToNewGraphFile, (void *)&dtt);
+                pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)&dtt);
             }
             else if (msg.data.operation == 2)
             {

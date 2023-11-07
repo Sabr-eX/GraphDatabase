@@ -22,15 +22,14 @@
 #include <pthread.h>
 
 #define MESSAGE_LENGTH 100
-#define LOAD_BALANCER_CHANNEL 1
-#define PRIMARY_SERVER_CHANNEL 2
-#define SECONDARY_SERVER_CHANNEL_1 3
-#define SECONDARY_SERVER_CHANNEL_2 4
+#define LOAD_BALANCER_CHANNEL 4000
+#define PRIMARY_SERVER_CHANNEL 4001
+#define SECONDARY_SERVER_CHANNEL_1 4002
+#define SECONDARY_SERVER_CHANNEL_2 4003
 #define MAX_THREADS 200
 
 struct data
 {
-    long client_id;
     long seq_num;
     long operation;
     char graph_name[MESSAGE_LENGTH];
