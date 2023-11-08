@@ -22,14 +22,14 @@
 #include <unistd.h>
 
 #define MESSAGE_LENGTH 100
-#define LOAD_BALANCER_CHANNEL 1
-#define PRIMARY_SERVER_CHANNEL 2
-#define SECONDARY_SERVER_CHANNEL_1 3
-#define SECONDARY_SERVER_CHANNEL_2 4
+#define LOAD_BALANCER_CHANNEL 4000
+#define PRIMARY_SERVER_CHANNEL 4001
+#define SECONDARY_SERVER_CHANNEL_1 4002
+#define SECONDARY_SERVER_CHANNEL_2 4003
 #define MAX_THREADS 200
 
-struct data {
-    long client_id;
+struct data
+{
     long seq_num;
     long operation;
     char graph_name[MESSAGE_LENGTH];
@@ -51,7 +51,9 @@ struct data_to_thread {
  * @param arg
  * @return void*
  */
-void *writeToNewGraphFile(void **arg) {
+
+void *writeToNewGraphFile(void *arg)
+{
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
     // On the server side for storing data, we just start with an integer
     // NOTE: Here we can use this and get away with it because we are not storing data here but only reading
@@ -62,9 +64,10 @@ void *writeToNewGraphFile(void **arg) {
     key_t shm_key;
     int shm_id;
     // Generate key for the shared memory
-    // Here, we are using the client_id as the key because
-    // we want to ensure that each client has a unique shared memory
-    while ((shm_key = ftok(".", dtt->msg.data.client_id)) == -1) {
+    // Here, we are using the seq_name as the key because
+    // we want to ensure that each request has a unique shared memory
+    while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
+    {
         perror("[Primary Server] Error while generating key for shared memory");
         exit(EXIT_FAILURE);
     }
@@ -114,7 +117,7 @@ void *writeToNewGraphFile(void **arg) {
     printf("[Primary Server] Successfully written to the file %s\n", filename);
 
     // Send reply to the client
-    dtt->msg.msg_type = dtt->msg.data.client_id;
+    dtt->msg.msg_type = dtt->msg.data.seq_num;
     dtt->msg.data.operation = 0;
     if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1) {
         perror("[Primary Server] Message could not be sent, please try again");
@@ -170,21 +173,20 @@ int main() {
         } else {
             printf("[Primary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
 
-            switch (msg.data.operation) {
-                case 1:
-                case 2: {
-                    // Write to a new file
-                    struct data_to_thread dtt;
-                    dtt.msg_queue_id = msg_queue_id;
-                    dtt.msg = msg;
-                    pthread_create(&thread_ids[msg.data.client_id], NULL, writeToNewGraphFile, (void *)&dtt);
-                    break;
-                }
-                case 5: {
-                    // Cleanup
-                    for (int i = 0; i < 200; i++) {
-                        pthread_join(thread_ids[i], NULL);
-                    }
+            if (msg.data.operation == 1 || msg.data.operation == 2)
+            {
+                // Write to a new file
+                struct data_to_thread dtt;
+                dtt.msg_queue_id = msg_queue_id;
+                dtt.msg = msg;
+                pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)&dtt);
+            }
+            else if (msg.data.operation == 5)
+            {
+                // Cleanup
+                for (int i = 0; i < 200; i++)
+                {
+                    pthread_join(thread_ids[i], NULL);
                 }
                 default:
                     break;
