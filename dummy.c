@@ -95,7 +95,6 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
             shmptr[shmptr_index++] = adjacency_matrix[i][j];
         }
     }
-    
 
     // Change message channel to load balancer and send it to load balancer
     message.msg_type = LOAD_BALANCER_CHANNEL;
@@ -112,9 +111,9 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
     {
         while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
         {
-            perror("[Client] Error while receiving message from s server");
+            perror("[Client] Error while receiving message from primary server");
         }
-        printf("[Client] Message received from the Primary Server: %ld -> %s using %ld\n", message.msg_type, message.data.graph_name, message.data.operation);
+        printf("[Client] Message received from the Primary Server: %ld -> %s using %c\n", message.msg_type, message.data.graph_name, message.data.operation);
         printf("[Client] File written successfully");
     }
 
@@ -129,101 +128,6 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
         perror("[Client] Error while deleting the shared memory\n");
         exit(EXIT_FAILURE);
     }
-}
-
-void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
-{
-	// Input number of nodes
-    int number_of_nodes;
-    printf("Enter Number of Nodes: ");
-    scanf("%d", &number_of_nodes);
-
-    // Input adjacency matrix
-    int adjacency_matrix[number_of_nodes][number_of_nodes];
-    printf("Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters: \n");
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        for (int j = 0; j < number_of_nodes; j++)
-        {
-            scanf("%d", &adjacency_matrix[i][j]);
-        }
-    }
-    //Input starting vertex
-    int starting_vertex;
-    printf("Enter Starting Vertex: \n");
-    scanf("%d", &starting_vertex);
-    
-    // Connect to shared memory
-    key_t shm_key;
-    int shm_id;
-    // Generate key for the shared memory
-    // Here, we are using the client_id as the key because
-    // we want to ensure that each client has a unique shared memory
-    while ((shm_key = ftok(".", seq_num)) == -1)
-    {
-        perror("[Client] Error while generating key for shared memory");
-        exit(EXIT_FAILURE);
-    }
-    printf("[Client] Generated shared memory key %d\n", shm_key);
-    // Connect to the shared memory using the key
-    if ((shm_id = shmget(shm_key, sizeof(adjacency_matrix) + sizeof(number_of_nodes), 0666 | IPC_CREAT)) == -1)
-    {
-        perror("[Client] Error occurred while connecting to shm\n");
-        exit(EXIT_FAILURE);
-    }
-    // Attach to the shared memory
-    int *shmptr = (int *)shmat(shm_id, NULL, 0);
-    if (shmptr == (void *)-1)
-    {
-        perror("[Client] Error while attaching to shared memory\n");
-        exit(EXIT_FAILURE);
-    }
-
-    int shmptr_index = 0;
-    // Store data in shared memory using array traversals
-    shmptr[shmptr_index++] = number_of_nodes;
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        for (int j = 0; j < number_of_nodes; j++)
-        {
-            shmptr[shmptr_index++] = adjacency_matrix[i][j];
-        }
-    }
-    shmptr[shmptr_index++]=starting_vertex;
-
-    // Change message channel to load balancer and send it to load balancer
-    message.msg_type = LOAD_BALANCER_CHANNEL;
-    message.data.operation = 4;
-    message.data.seq_num = seq_num;
-
-    // Send the message to the load balancer
-    if (msgsnd(msg_queue_id, &message, sizeof(message.data), 0) == -1)
-    {
-        perror("[Client] Message could not be sent, please try again");
-        exit(EXIT_FAILURE);
-    }
-    else
-    {
-        while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
-        {
-            perror("[Client] Error while receiving message from secondary server");
-        }
-        printf("[Client] Message received from the secondary Server: %ld -> %s using %ld\n", message.msg_type, message.data.graph_name, message.data.operation);
-        printf("[Client] File written successfully");
-    }
-
-    // Detach shared memory and delete it
-    if (shmdt(shmptr) == -1)
-    {
-        perror("[Client] Could not detach from shared memory\n");
-        exit(EXIT_FAILURE);
-    }
-    if (shmctl(shm_id, IPC_RMID, 0) == -1)
-    {
-        perror("[Client] Error while deleting the shared memory\n");
-        exit(EXIT_FAILURE);
-    }
-    
 }
 
 /**
@@ -295,7 +199,6 @@ int main()
         }
         else if (operation == 4)
         {
-        	operation_four(msg_queue_id, seq_num, message);
         }
         else if (operation == 5)
         {
