@@ -246,13 +246,7 @@ void *bfs(void *arg)
         exit(EXIT_FAILURE);
     }
 
-    // Read the starting vertex from the file
-    FILE *file = fopen(dtt->msg.data.graph_name, "r");
-    if (!file)
-    {
-        perror("[Secondary Server] Error opening file");
-        exit(EXIT_FAILURE);
-    }
+ 
     //Read number of nodes and adj matrix from file
     readGraphFromFile(dtt->msg.data.graph_name);
 
