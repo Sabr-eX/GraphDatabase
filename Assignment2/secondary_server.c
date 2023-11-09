@@ -144,6 +144,34 @@ int dequeue(struct Queue* queue)
 	}
 	return value; 
 }
+
+int readGraphFromFile(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read the number of nodes
+    if (fscanf(file, "%d", &number_of_nodes) != 1) {
+        perror("Error reading the number of nodes");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read the adjacency matrix
+    for (int i = 0; i < number_of_nodes; i++) {
+        for (int j = 0; j < number_of_nodes; j++) {
+            if (fscanf(file, "%d", &adjacencyMatrix[i][j]) != 1) {
+                perror("Error reading the adjacency matrix");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
+    fclose(file);
+    return number_of_nodes;
+}
+
 /**
  * @brief This function performs BFS for the input graph. The starting vertex is shared by the client using shared memory.
  *
@@ -186,94 +214,76 @@ void* bfs_thread(void* arg) {
 }
 
  
- void *bfs(void *arg)
- {
- 	struct data_to_thread *dtt = (struct data_to_thread *)arg;
+void *bfs(void *arg)
+{
+    struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
- 	//Connect to shared memory
- 	//nodes, adj matrix and starting vertex stored in that order
- 	key_t shm_key;
+    // Connect to shared memory
+    // Only starting vertex stored in shared memory
+    key_t shm_key;
     int shm_id;
+
     // Generate key for the shared memory
-    // Here, we are using the seq_name as the key because
-    // we want to ensure that each request has a unique shared memory
     while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
     {
-      	perror("[Secondary Server] Error while generating key for shared memory");
-       	exit(EXIT_FAILURE);
+        perror("[Secondary Server] Error while generating key for shared memory");
+        exit(EXIT_FAILURE);
     }
     printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
-    // Connect to the shared memory using the key
-    if ((shm_id = shmget(shm_key, sizeof(number_of_nodes), 0666)) == -1)
+
+    // Create shared memory for starting vertex
+    if ((shm_id = shmget(shm_key, sizeof(int), IPC_CREAT | 0666)) == -1)
     {
-       	perror("[Secondary Server] Error occurred while connecting to shm\n");
-       	exit(EXIT_FAILURE);
+        perror("[Secondary Server] Error creating shared memory");
+        exit(EXIT_FAILURE);
     }
+
     // Attach to the shared memory
     int *shmptr = (int *)shmat(shm_id, NULL, 0);
     if (shmptr == (void *)-1)
     {
-      	perror("[Secondary Server] Error in shmat \n");
-       	exit(EXIT_FAILURE);
+        perror("[Secondary Server] Error in shmat \n");
+        exit(EXIT_FAILURE);
     }
-    
-	int shmptr_index = 0;
-    int number_of_nodes = shmptr[shmptr_index++];
-    int adjacency_matrix[number_of_nodes][number_of_nodes];
-    for (int i = 0; i < number_of_nodes; i++)
+
+    // Read the starting vertex from the file
+    FILE *file = fopen(dtt->msg.data.graph_name, "r");
+    if (!file)
     {
-       	for (int j = 0; j < number_of_nodes; j++)
-       	{
-         	adjacency_matrix[i][j] = shmptr[shmptr_index++];
-       	}
+        perror("[Secondary Server] Error opening file");
+        exit(EXIT_FAILURE);
     }
-    int starting_vertex= shmptr[shmptr_index++];
-	// BFS for the retrieved matrix
-    struct Queue* queue = createQueue();
-    struct BFSNode start_node;
-    start_node.level = 0;
-    start_node.vertex = starting_vertex;
-    enqueue(queue, start_node.vertex);
-    visited[starting_vertex] = 1;
-    int thread_counter = 0;
 
-    while (!isEmpty(queue)) 
-	{
-        int current_vertex = dequeue(queue);
-        struct BFSResult result;
-        result.num_vertices = 0;
+    // Read the starting vertex
+    if (fscanf(file, "%d", &starting_vertex) != 1)
+    {
+        perror("[Secondary Server] Error reading the starting vertex");
+        exit(EXIT_FAILURE);
+    }
 
-        // Create new threads to process nodes concurrently
-        struct thread_data td;
-        td.node.level = 0;
-        td.node.vertex = current_vertex;
-        td.dtt = *dtt;
+    fclose(file);
 
-        if (pthread_create(&thread_ids[thread_counter], NULL, bfs_thread, &td) != 0) 
-		{
-            perror("Error in thread creation");
-            exit(EXIT_FAILURE);
-        }
-        thread_counter++;
+    // Write the starting vertex to shared memory
+    shmptr[0] = starting_vertex;
 
-        // Wait for all threads to finish
-        for (int i = 0; i < thread_counter; i++) 
-		{
-            pthread_join(thread_ids[i], NULL);
-        }
+    // Detach from shared memory
+    if (shmdt(shmptr) == -1)
+    {
+        perror("[Secondary Server] Could not detach from shared memory\n");
+        exit(EXIT_FAILURE);
+    }
 
-        // Detach from shared memory
-        if (shmdt(shmptr) == -1) {
-            perror("[Secondary Server] Could not detach from shared memory\n");
-            exit(EXIT_FAILURE);
-        }
-        pthread_exit(NULL);
-    }	
+    // Notify the client that shared memory is ready
+    msgsnd(dtt->msg_queue_id, &dtt->msg, sizeof(dtt->msg.data), 0);
+
+    // Exit the BFS thread
+    pthread_exit(NULL);
 }
+
 
 int main()
 {
-    // Iniitalize the server
+    // Initialize the server
     printf("[Secondary Server] Initializing Secondary Server...\n");
 
     // Create the message queue
@@ -282,7 +292,7 @@ int main()
     struct msg_buffer msg;
 
     // Link it with a key which lets you use the same key to communicate from both sides
-    if ((key = ftok(".", 'B')) == -1) //hi do we have to change this?
+    if ((key = ftok(".", 'B')) == -1)
     {
         perror("[Secondary Server] Error while generating key of the file");
         exit(EXIT_FAILURE);
@@ -296,40 +306,76 @@ int main()
     }
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
-    // Store the thread_ids
-    pthread_t thread_ids[MAX_THREADS];
+    // Store the thread_id for BFS thread
+    pthread_t bfs_thread_id;
 
     // Listen to the message queue for new requests from the clients
-    while (1)
-    {
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), PRIMARY_SERVER_CHANNEL, 0) == -1)
-        {
-            perror("[Secondary Server] Error while receiving message from the client");
-            exit(EXIT_FAILURE);
-        }
-        else
-        {
-            printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
-			if(msg.data.operation == 4)
-			{
-				struct data_to_thread dtt;
-				dtt.msg_queue_id = msg_queue_id;
-				dtt.msg=msg;
+// Listen to the message queue for new requests from the clients
+while (1)
+{
+    struct data_to_thread dtt; // Declare dtt here
 
-			}
-            else if (msg.data.operation == 5)
+    if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), dtt.msg.msg_type, 0) == -1)
+{
+    perror("[Secondary Server] Error while receiving message from the client");
+    exit(EXIT_FAILURE);
+}
+
+    else
+    {
+        printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
+
+        if (msg.data.operation == 4)
+        {
+            // Operation code for BFS request
+
+            // Create a data_to_thread structure
+            dtt.msg_queue_id = msg_queue_id;
+            dtt.msg = msg;
+
+            // Determine the channel based on seq_num
+            int channel;
+            if (msg.data.seq_num % 2 == 1)
             {
-                // Cleanup
-                for (int i = 0; i < 200; i++)
-                {
-                    pthread_join(thread_ids[i], NULL);
-                }
+                channel = SECONDARY_SERVER_CHANNEL_1;
+            }
+            else
+            {
+                channel = SECONDARY_SERVER_CHANNEL_2;
+            }
+
+            // Set the channel in the message structure
+            dtt.msg.msg_type = channel;
+
+            // Create a new thread to handle BFS
+            if (pthread_create(&bfs_thread_id, NULL, bfs, (void *)&dtt) != 0)
+            {
+                perror("[Secondary Server] Error in BFS thread creation");
+                exit(EXIT_FAILURE);
+            }
+
+            // Wait for the BFS thread to finish
+            pthread_join(bfs_thread_id, NULL);
+        }
+        else if (msg.data.operation == 5)
+        {
+            // Operation code for cleanup
+
+            // Cleanup: Join the BFS thread
+            if (bfs_thread_id != 0)
+            {
+                pthread_join(bfs_thread_id, NULL);
+                bfs_thread_id = 0;
             }
         }
     }
+}
+
+
 
     return 0;
 }
+
 
     	
     

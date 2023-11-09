@@ -133,21 +133,6 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
 
 void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
 {
-	// Input number of nodes
-    int number_of_nodes;
-    printf("Enter Number of Nodes: ");
-    scanf("%d", &number_of_nodes);
-
-    // Input adjacency matrix
-    int adjacency_matrix[number_of_nodes][number_of_nodes];
-    printf("Enter adjacency matrix, each row on a separate line and elements of a single row separated by whitespace characters: \n");
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        for (int j = 0; j < number_of_nodes; j++)
-        {
-            scanf("%d", &adjacency_matrix[i][j]);
-        }
-    }
     //Input starting vertex
     int starting_vertex;
     printf("Enter Starting Vertex: \n");
@@ -181,14 +166,6 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
 
     int shmptr_index = 0;
     // Store data in shared memory using array traversals
-    shmptr[shmptr_index++] = number_of_nodes;
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        for (int j = 0; j < number_of_nodes; j++)
-        {
-            shmptr[shmptr_index++] = adjacency_matrix[i][j];
-        }
-    }
     shmptr[shmptr_index++]=starting_vertex;
 
     // Change message channel to load balancer and send it to load balancer
