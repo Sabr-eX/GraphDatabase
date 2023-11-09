@@ -41,6 +41,13 @@ struct msg_buffer
     struct data data;
 };
 
+/**
+ * @brief
+ *
+ * @param msg_queue_id
+ * @param seq_num
+ * @param message
+ */
 void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
 {
     // Input number of nodes
@@ -95,7 +102,6 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
             shmptr[shmptr_index++] = adjacency_matrix[i][j];
         }
     }
-    
 
     // Change message channel to load balancer and send it to load balancer
     message.msg_type = LOAD_BALANCER_CHANNEL;
@@ -131,13 +137,20 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
     }
 }
 
+/**
+ * @brief
+ *
+ * @param msg_queue_id
+ * @param seq_num
+ * @param message
+ */
 void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
 {
-    //Input starting vertex
+    // Input starting vertex
     int starting_vertex;
     printf("Enter Starting Vertex: \n");
     scanf("%d", &starting_vertex);
-    
+
     // Connect to shared memory
     key_t shm_key;
     int shm_id;
@@ -151,7 +164,7 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
     }
     printf("[Client] Generated shared memory key %d\n", shm_key);
     // Connect to the shared memory using the key
-    if ((shm_id = shmget(shm_key, sizeof(adjacency_matrix) + sizeof(number_of_nodes), 0666 | IPC_CREAT)) == -1)
+    if ((shm_id = shmget(shm_key, sizeof(starting_vertex), 0666 | IPC_CREAT)) == -1)
     {
         perror("[Client] Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
@@ -166,7 +179,7 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
 
     int shmptr_index = 0;
     // Store data in shared memory using array traversals
-    shmptr[shmptr_index++]=starting_vertex;
+    shmptr[shmptr_index++] = starting_vertex;
 
     // Change message channel to load balancer and send it to load balancer
     message.msg_type = LOAD_BALANCER_CHANNEL;
@@ -200,7 +213,6 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
         perror("[Client] Error while deleting the shared memory\n");
         exit(EXIT_FAILURE);
     }
-    
 }
 
 /**
@@ -272,7 +284,7 @@ int main()
         }
         else if (operation == 4)
         {
-        	operation_four(msg_queue_id, seq_num, message);
+            operation_four(msg_queue_id, seq_num, message);
         }
         else if (operation == 5)
         {
