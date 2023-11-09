@@ -253,15 +253,8 @@ void *bfs(void *arg)
         perror("[Secondary Server] Error opening file");
         exit(EXIT_FAILURE);
     }
-
-    // Read the starting vertex
-    if (fscanf(file, "%d", &starting_vertex) != 1)
-    {
-        perror("[Secondary Server] Error reading the starting vertex");
-        exit(EXIT_FAILURE);
-    }
-
-    fclose(file);
+    //Read number of nodes and adj matrix from file
+    readGraphFromFile(dtt->msg.data.graph_name);
 
     // Write the starting vertex to shared memory
     shmptr[0] = starting_vertex;
@@ -310,7 +303,7 @@ int main()
     pthread_t bfs_thread_id;
 
     // Listen to the message queue for new requests from the clients
-// Listen to the message queue for new requests from the clients
+
 while (1)
 {
     struct data_to_thread dtt; // Declare dtt here
