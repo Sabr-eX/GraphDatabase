@@ -9,7 +9,6 @@
 #include <sys/shm.h>
 #include <pthread.h>
 
-
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 4000
 #define PRIMARY_SERVER_CHANNEL 4001
@@ -18,17 +17,17 @@
 #define MAX_THREADS 200
 #define MAX_VERTICES 100
 
-//global variables
+// global variables
 int adjacencyMatrix[MAX_VERTICES][MAX_VERTICES];
 int visited[MAX_VERTICES];
 int number_of_nodes;
 int starting_vertex;
 
-//Incorporate multithreading while traversing each evel
+// Incorporate multithreading while traversing each evel
 
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
-*/
+ */
 
 struct data
 {
@@ -39,7 +38,7 @@ struct data
 
 /**
  * The struct msg_buffer is used for message passing through message queues. It contains a message type and the struct data structure to carry the message data.
-*/
+ */
 
 struct msg_buffer
 {
@@ -49,7 +48,7 @@ struct msg_buffer
 
 /**
  * Used to pass data to threads for BFS processing. It includes a message queue ID and a message buffer.
-*/
+ */
 struct data_to_thread
 {
     int msg_queue_id;
@@ -58,110 +57,116 @@ struct data_to_thread
 
 /**
  * Has structure of a particular node during BFS Traversal
-*/
+ */
 struct BFSNode
 {
-	int level;
-	int vertex;
+    int level;
+    int vertex;
 };
 
 /**
  * Stores result of the BFS
-*/
+ */
 struct BFSResult
 {
-	int vertices[MAX_VERTICES];
-	int num_vertices;
+    int vertices[MAX_VERTICES];
+    int num_vertices;
 };
 
 /**
  * Standard queue DS
-*/
+ */
 struct Queue
 {
-	int node_size[MAX_VERTICES];
-	int front, rear;
+    int node_size[MAX_VERTICES];
+    int front, rear;
 };
 
 /**
  * We use this structure to pass data to individual threads. It contains a struct BFSNode for the node being processed, a struct BFSResult to store results, and a struct data_to_thread to pass message data.
-*/
+ */
 
 struct thread_data
 {
-	struct BFSNode node;
-	struct BFSResult result;
-	struct data_to_thread dtt;
+    struct BFSNode node;
+    struct BFSResult result;
+    struct data_to_thread dtt;
 };
 
-//Array of thread ids for BFS
+// Array of thread ids for BFS
 pthread_t thread_ids[MAX_THREADS];
 
-//Create and Initialize queue
-struct Queue* createQueue()
+// Create and Initialize queue
+struct Queue *createQueue()
 {
-	struct Queue* queue = (struct Queue* )malloc(sizeof(struct Queue));
-	queue->front=-1;
-	queue->rear=-1;
-	return queue;
+    struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
+    queue->front = -1;
+    queue->rear = -1;
+    return queue;
 }
 
-int isEmpty(struct Queue* queue)
+int isEmpty(struct Queue *queue)
 {
-	return(queue->front==-1);
+    return (queue->front == -1);
 }
 
-void enqueue(struct Queue* queue, int value)
+void enqueue(struct Queue *queue, int value)
 {
-	if(queue->rear== MAX_VERTICES-1)
-	{
-		printf("Queue is full\n");
-		return;
-	}
-	if(queue->front==-1)
-	{
-		queue->front=0;
-	}
-	queue->node_size[queue->rear++]=value;
+    if (queue->rear == MAX_VERTICES - 1)
+    {
+        printf("Queue is full\n");
+        return;
+    }
+    if (queue->front == -1)
+    {
+        queue->front = 0;
+    }
+    queue->node_size[queue->rear++] = value;
 }
 
-int dequeue(struct Queue* queue)
+int dequeue(struct Queue *queue)
 {
-	if(isEmpty(queue))
-	{
-		printf("Queue is empty\n");
-		exit(EXIT_FAILURE);
-	}
-	int value= queue->node_size[queue->front];
-	if(queue->front==queue->rear)
-	{
-		queue->front=-1;
-		queue->rear=-1;
-	}
-	else
-	{
-		queue->front++;
-	}
-	return value; 
+    if (isEmpty(queue))
+    {
+        printf("Queue is empty\n");
+        exit(EXIT_FAILURE);
+    }
+    int value = queue->node_size[queue->front];
+    if (queue->front == queue->rear)
+    {
+        queue->front = -1;
+        queue->rear = -1;
+    }
+    else
+    {
+        queue->front++;
+    }
+    return value;
 }
 
-int readGraphFromFile(const char *filename) {
+int readGraphFromFile(const char *filename)
+{
     FILE *file = fopen(filename, "r");
-    if (!file) {
+    if (!file)
+    {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
 
     // Read the number of nodes
-    if (fscanf(file, "%d", &number_of_nodes) != 1) {
+    if (fscanf(file, "%d", &number_of_nodes) != 1)
+    {
         perror("Error reading the number of nodes");
         exit(EXIT_FAILURE);
     }
 
     // Read the adjacency matrix
-    for (int i = 0; i < number_of_nodes; i++) {
-        for (int j = 0; j < number_of_nodes; j++) {
-            if (fscanf(file, "%d", &adjacencyMatrix[i][j]) != 1) {
+    for (int i = 0; i < number_of_nodes; i++)
+    {
+        for (int j = 0; j < number_of_nodes; j++)
+        {
+            if (fscanf(file, "%d", &adjacencyMatrix[i][j]) != 1)
+            {
                 perror("Error reading the adjacency matrix");
                 exit(EXIT_FAILURE);
             }
@@ -180,23 +185,27 @@ int readGraphFromFile(const char *filename) {
  */
 
 // bfs_thread function
-void* bfs_thread(void* arg) {
-    struct thread_data* td = (struct thread_data*)arg;
+void *bfs_thread(void *arg)
+{
+    struct thread_data *td = (struct thread_data *)arg;
 
     int level = td->node.level;
     int vertex = td->node.vertex;
 
     // BFS for the specific level and vertex
-    struct Queue* queue = createQueue();
+    struct Queue *queue = createQueue();
     enqueue(queue, vertex);
     td->result.vertices[td->result.num_vertices++] = vertex;
 
-    while (!isEmpty(queue)) {
+    while (!isEmpty(queue))
+    {
         int current_vertex = dequeue(queue);
 
         // Process the current_vertex and add its neighbors to the queue
-        for (int i = 0; i < number_of_nodes; i++) {
-            if (adjacencyMatrix[current_vertex][i] && !visited[i]) {
+        for (int i = 0; i < number_of_nodes; i++)
+        {
+            if (adjacencyMatrix[current_vertex][i] && !visited[i])
+            {
                 visited[i] = 1;
                 struct BFSNode next_node;
                 next_node.level = level + 1;
@@ -205,7 +214,6 @@ void* bfs_thread(void* arg) {
                 // Enqueue the next node for processing
                 enqueue(queue, next_node.vertex);
                 td->result.vertices[td->result.num_vertices++] = next_node.vertex;
-
             }
         }
     }
@@ -213,7 +221,6 @@ void* bfs_thread(void* arg) {
     pthread_exit(NULL);
 }
 
- 
 void *bfs(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -246,8 +253,7 @@ void *bfs(void *arg)
         exit(EXIT_FAILURE);
     }
 
- 
-    //Read number of nodes and adj matrix from file
+    // Read number of nodes and adj matrix from file
     readGraphFromFile(dtt->msg.data.graph_name);
 
     // Write the starting vertex to shared memory
@@ -266,7 +272,6 @@ void *bfs(void *arg)
     // Exit the BFS thread
     pthread_exit(NULL);
 }
-
 
 int main()
 {
@@ -298,74 +303,65 @@ int main()
 
     // Listen to the message queue for new requests from the clients
 
-while (1)
-{
-    struct data_to_thread dtt; // Declare dtt here
-
-    if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), dtt.msg.msg_type, 0) == -1)
-{
-    perror("[Secondary Server] Error while receiving message from the client");
-    exit(EXIT_FAILURE);
-}
-
-    else
+    while (1)
     {
-        printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
+        struct data_to_thread dtt; // Declare dtt here
 
-        if (msg.data.operation == 4)
+        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), dtt.msg.msg_type, 0) == -1)
         {
-            // Operation code for BFS request
-
-            // Create a data_to_thread structure
-            dtt.msg_queue_id = msg_queue_id;
-            dtt.msg = msg;
-
-            // Determine the channel based on seq_num
-            int channel;
-            if (msg.data.seq_num % 2 == 1)
-            {
-                channel = SECONDARY_SERVER_CHANNEL_1;
-            }
-            else
-            {
-                channel = SECONDARY_SERVER_CHANNEL_2;
-            }
-
-            // Set the channel in the message structure
-            dtt.msg.msg_type = channel;
-
-            // Create a new thread to handle BFS
-            if (pthread_create(&bfs_thread_id, NULL, bfs, (void *)&dtt) != 0)
-            {
-                perror("[Secondary Server] Error in BFS thread creation");
-                exit(EXIT_FAILURE);
-            }
-
-            // Wait for the BFS thread to finish
-            pthread_join(bfs_thread_id, NULL);
+            perror("[Secondary Server] Error while receiving message from the client");
+            exit(EXIT_FAILURE);
         }
-        else if (msg.data.operation == 5)
-        {
-            // Operation code for cleanup
 
-            // Cleanup: Join the BFS thread
-            if (bfs_thread_id != 0)
+        else
+        {
+            printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
+
+            if (msg.data.operation == 4)
             {
+                // Operation code for BFS request
+
+                // Create a data_to_thread structure
+                dtt.msg_queue_id = msg_queue_id;
+                dtt.msg = msg;
+
+                // Determine the channel based on seq_num
+                int channel;
+                if (msg.data.seq_num % 2 == 1)
+                {
+                    channel = SECONDARY_SERVER_CHANNEL_1;
+                }
+                else
+                {
+                    channel = SECONDARY_SERVER_CHANNEL_2;
+                }
+
+                // Set the channel in the message structure
+                dtt.msg.msg_type = channel;
+
+                // Create a new thread to handle BFS
+                if (pthread_create(&bfs_thread_id, NULL, bfs, (void *)&dtt) != 0)
+                {
+                    perror("[Secondary Server] Error in BFS thread creation");
+                    exit(EXIT_FAILURE);
+                }
+
+                // Wait for the BFS thread to finish
                 pthread_join(bfs_thread_id, NULL);
-                bfs_thread_id = 0;
+            }
+            else if (msg.data.operation == 5)
+            {
+                // Operation code for cleanup
+
+                // Cleanup: Join the BFS thread
+                if (bfs_thread_id != 0)
+                {
+                    pthread_join(bfs_thread_id, NULL);
+                    bfs_thread_id = 0;
+                }
             }
         }
     }
-}
-
-
 
     return 0;
 }
-
-
-    	
-    
-    	
- 
- 
