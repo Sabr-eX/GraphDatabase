@@ -47,12 +47,14 @@ struct msg_buffer
 };
 
 /**
- * Used to pass data to threads for BFS processing. It includes a message queue ID and a message buffer.
+ * Used to pass data to threads for BFS and dfs processing. It includes a message queue ID and a message buffer.
  */
 struct data_to_thread
 {
     int msg_queue_id;
     struct msg_buffer msg;
+    int starting_vertex;
+    int *storage_pointer;
 };
 
 /**
@@ -273,9 +275,20 @@ void *bfs(void *arg)
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Will be called by the main thread of the secondary server to perform DFS
+ * It will find the starting vertex from the shared memory and then perform DFS
+ *
+ *
+ * @param arg
+ * @return void*
+ */
 void *dfs(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
+
+    int number_of_nodes;
+    int starting_vertex;
 
     // Connect to shared memory
     key_t shm_key;
@@ -305,7 +318,7 @@ void *dfs(void *arg)
         exit(EXIT_FAILURE);
     }
 
-    int starting_vertex = *shmptr;
+    starting_vertex = *shmptr;
     *shmptr = (int)'*';
     s = shmptr++;
 
@@ -317,6 +330,9 @@ void *dfs(void *arg)
         exit(EXIT_FAILURE);
     }
     fscanf(fptr, "%d", &number_of_nodes);
+
+    int adjacencyMatrix[number_of_nodes][number_of_nodes];
+    int visited[number_of_nodes];
 
     while (!feof(fptr))
     {
@@ -336,33 +352,31 @@ void *dfs(void *arg)
     }
 
     visited[starting_vertex] = 1;
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        if ((adjacencyMatrix[starting_vertex][i] == 1) && (visited[i] == 0))
-        {
-            visited[i] = 1;
-            pthread_t thread_id;
-            // pthread_create(&thread_id, NULL, dfsThread, i, &s);
-            pthread_join(thread_id, NULL);
-        }
-    }
+    dfsThread(&dtt);
 
     // Exit the DFS thread
     pthread_exit(NULL);
 }
 
-void dfsThread(int current_vertex, int *s)
+void dfsThread(void *arg)
 {
+    struct data_to_thread *dtt = (struct data_to_thread *)arg;
+    int current_vertex = dtt->starting_vertex;
+    int *s = dtt->storage_pointer;
+
     int flag = 0;
+    pthread_t dfs_thread_id[number_of_nodes];
     for (int i = 0; i < number_of_nodes; i++)
     {
-        if ((adjacencyMatrix[current_vertex][i] == 1) && (visited[i] == 0))
+        if ((adjacencyMatrix[dtt->starting_vertex][i] == 1) && (visited[i] == 0))
         {
             flag = 1;
             visited[i] = 1;
-            pthread_t thread_id;
-            // pthread_create(&thread_id, NULL, dfsThread, i, &s);
-            pthread_join(thread_id, NULL);
+
+            dtt->starting_vertex = i;
+            dtt->storage_pointer = &s;
+
+            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
         }
         else if ((i == number_of_nodes - 1) && (flag == 0))
         {
@@ -372,6 +386,8 @@ void dfsThread(int current_vertex, int *s)
             s++;
         }
     }
+    for (int i = 0; i < number_of_nodes; i++)
+        pthread_join(dfs_thread_id[i], NULL);
 }
 
 int main()
