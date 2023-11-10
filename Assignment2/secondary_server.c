@@ -434,6 +434,8 @@ int main()
         channel = SECONDARY_SERVER_CHANNEL_2;
     }
 
+    printf("[Secondary Server] Using Channel: %d\n", channel);
+
     // Listen to the message queue for new requests from the clients
     while (1)
     {
