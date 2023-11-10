@@ -273,9 +273,9 @@ void *bfs(void *arg)
     pthread_exit(NULL);
 }
 
-void dfs(void arg)
+void *dfs(void *arg)
 {
-    struct data_to_thread dtt = (struct data_to_thread)arg;
+    struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
     // Connect to shared memory
     key_t shm_key;
@@ -305,12 +305,13 @@ void dfs(void arg)
         exit(EXIT_FAILURE);
     }
 
-    int starting_vertex = *shm;
-    *shm = (int *)'*';
-    s = shm++;
+    int starting_vertex = *shmptr;
+    *shmptr = (int *)'*';
+    s = shmptr++;
 
     // Opening the Graph file to read the read the adjacency matrix
-    FILE *fptr = fopen(dtt->msg.data.graph_name, "r") if (fptr == NULL)
+    FILE *fptr = fopen(dtt->msg.data.graph_name, "r");
+    if (fptr == NULL)
     {
         printf("[Seconday Server] Error opening file");
         return 1;
@@ -321,14 +322,15 @@ void dfs(void arg)
     {
         if (ferror(fptr))
         {
-            printf("[Secondary Server] Error reading file") return 1;
+            printf("[Secondary Server] Error reading file");
+            return 1;
         }
 
         for (int i = 0; i < number_of_nodes; i++)
         {
             for (int j = 0; j < number_of_nodes; j++)
             {
-                fscanf(fptr, "%d", &adjacencyMatrix[i][j])
+                fscanf(fptr, "%d", &adjacencyMatrix[i][j]);
             }
         }
     }
@@ -340,7 +342,7 @@ void dfs(void arg)
         {
             visited[i] = 1;
             pthread_t thread_id;
-            pthread_create(&thread_id, NULL, dfsThread, i, &s);
+            // pthread_create(&thread_id, NULL, dfsThread, i, &s);
             pthread_join(thread_id, NULL);
         }
     }
@@ -356,7 +358,7 @@ void dfsThread(int current_vertex, int *s)
             flag = 1;
             visited[i] = 1;
             pthread_t thread_id;
-            pthread_create(&thread_id, NULL, dfsThread, i, &s);
+            // pthread_create(&thread_id, NULL, dfsThread, i, &s);
             pthread_join(thread_id, NULL);
         }
         else if ((i == number_of_nodes - 1) && (flag == 0))
@@ -417,7 +419,6 @@ int main()
             if (msg.data.operation == 4)
             {
                 // Operation code for BFS request
-
                 // Create a data_to_thread structure
                 dtt.msg_queue_id = msg_queue_id;
                 dtt.msg = msg;
