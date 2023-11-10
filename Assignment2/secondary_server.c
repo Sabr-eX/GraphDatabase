@@ -273,6 +273,103 @@ void *bfs(void *arg)
     pthread_exit(NULL);
 }
 
+void dfs(void arg)
+{
+    struct data_to_thread dtt = (struct data_to_thread)arg;
+
+    // Connect to shared memory
+    key_t shm_key;
+    int shm_id;
+    int *shmptr, *s;
+
+    // Generate key for the shared memory
+    // Here, we are using the seq_num as the key because
+    // we want to ensure that each request has a unique shared memory
+    while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
+    {
+        perror("[Secondary Server] Error while generating key for shared memory");
+        exit(EXIT_FAILURE);
+    }
+    printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
+    // Connect to the shared memory using the key
+    if ((shm_id = shmget(shm_key, sizeof(number_of_nodes), 0666)) < 0)
+    {
+        perror("[Secondary Server] Error occurred while connecting to shm\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // Attach to the shared memory
+    if ((shmptr = (int *)shmat(shm_id, NULL, 0)) == (void *)-1)
+    {
+        perror("[Secondary Server] Error in shmat \n");
+        exit(EXIT_FAILURE);
+    }
+
+    int starting_vertex = *shm;
+    *shm = (int *)'*';
+    s = shm++;
+
+    // Opening the Graph file to read the read the adjacency matrix
+    FILE *fptr = fopen(dtt->msg.data.graph_name, "r") if (fptr == NULL)
+    {
+        printf("[Seconday Server] Error opening file");
+        return 1;
+    }
+    fscanf(fptr, "%d %d", &number_of_nodes);
+
+    while (!feof(fptr))
+    {
+        if (ferror(fptr))
+        {
+            printf("[Secondary Server] Error reading file") return 1;
+        }
+
+        for (int i = 0; i < number_of_nodes; i++)
+        {
+            for (int j = 0; j < number_of_nodes; j++)
+            {
+                fscanf(fptr, "%d", &adjacencyMatrix[i][j])
+            }
+        }
+    }
+
+    visited[starting_vertex] = 1;
+    for (int i = 0; i < number_of_nodes; i++)
+    {
+        if ((adjacencyMatrix[starting_vertex][i] == 1) && (visited[i] == 0))
+        {
+            visited[i] = 1;
+            pthread_t thread_id;
+            pthread_create(&thread_id, NULL, dfsThread, i, &s);
+            pthread_join(thread_id, NULL);
+        }
+    }
+}
+
+void dfsThread(int current_vertex, int *s)
+{
+    int flag = 0;
+    for (int i = 0; i < number_of_nodes; i++)
+    {
+        if ((adjacencyMatrix[current_vertex][i] == 1) && (visited[i] == 0))
+        {
+            flag = 1;
+            visited[i] = 1;
+            pthread_t thread_id;
+            pthread_create(&thread_id, NULL, dfsThread, i, &s);
+            pthread_join(thread_id, NULL);
+        }
+        else if ((i == number_of_nodes - 1) && (flag == 0))
+        {
+            *s = current_vertex;
+            s++;
+            *s = (int *)' ';
+            s++;
+        }
+    }
+    return NULL;
+}
+
 int main()
 {
     // Initialize the server

@@ -10,11 +10,13 @@
  *
  */
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/shm.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <limits.h>
@@ -118,7 +120,7 @@ void operation_one(int msg_queue_id, int seq_num, struct msg_buffer message)
     {
         while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
         {
-            perror("[Client] Error while receiving message from s server");
+            perror("[Client] Error while receiving message from Primary server");
         }
         printf("[Client] Message received from the Primary Server: %ld -> %s using %ld\n", message.msg_type, message.data.graph_name, message.data.operation);
         printf("[Client] File written successfully");
@@ -272,12 +274,9 @@ int main()
 
         printf("\nInput given: Seq: %d Op: %d Name: %s\n", seq_num, operation, message.data.graph_name);
 
-        if (operation == 1)
+        if (operation == 1 || operation == 2)
         {
             operation_one(msg_queue_id, seq_num, message);
-        }
-        else if (operation == 2)
-        {
         }
         else if (operation == 3)
         {
