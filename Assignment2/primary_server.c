@@ -104,7 +104,7 @@ void *writeToNewGraphFile(void *arg)
     // Choose an appropriate size for your filename
     char filename[256];
     // Make sure the filename is null-terminated, and copy it to the 'filename' array
-    snprintf(filename, sizeof(filename), "graphs/%s", dtt->msg.data.graph_name);
+    snprintf(filename, sizeof(filename), "%s", dtt->msg.data.graph_name);
     fp = fopen(filename, "w");
     if (fp == NULL)
     {
