@@ -101,6 +101,8 @@ int main()
         }
         else
         {
+            // Print the message received
+            printf("[Load Balancer] Message received from the client: %ld -> %s using %ld\n", msg.msg_type, msg.data.graph_name, msg.data.operation);
             // Check if it's cleanup
             if (msg.data.operation == 5)
             {
