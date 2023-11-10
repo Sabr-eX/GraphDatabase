@@ -10,16 +10,18 @@
  *
  */
 
+#include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/shm.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
-#include <sys/shm.h>
-#include <pthread.h>
+#include <fcntl.h>
+#include <semaphore.h>
 
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 4000

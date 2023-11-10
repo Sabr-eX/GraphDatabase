@@ -10,16 +10,18 @@
  *
  */
 
+#include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/shm.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
-#include <sys/shm.h>
-#include <pthread.h>
+#include <fcntl.h>
+#include <semaphore.h>
 
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 4000
@@ -102,7 +104,7 @@ int main()
         else
         {
             // Print the message received
-            printf("[Load Balancer] Message received from the client: %ld -> %s using %ld\n", msg.msg_type, msg.data.graph_name, msg.data.operation);
+            printf("[Load Balancer] Message received from the client: %ld -> %s using Op %ld\n", msg.data.seq_num, msg.data.graph_name, msg.data.operation);
             // Check if it's cleanup
             if (msg.data.operation == 5)
             {
