@@ -363,6 +363,7 @@ int main()
         }
         else if (operation == 3)
         {
+            operation_three(msg_queue_id, seq_num, message);
         }
         else if (operation == 4)
         {

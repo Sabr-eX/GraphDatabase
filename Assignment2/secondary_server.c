@@ -418,17 +418,28 @@ int main()
     // Store the thread_ids thread
     pthread_t thread_ids[200];
 
+    int channel;
+    printf("[Secondary Server] Enter the channel number: ");
+    scanf("%d", &channel);
+    if (channel == 1)
+    {
+        channel = SECONDARY_SERVER_CHANNEL_1;
+    }
+    else
+    {
+        channel = SECONDARY_SERVER_CHANNEL_2;
+    }
+
     // Listen to the message queue for new requests from the clients
     while (1)
     {
         struct data_to_thread dtt; // Declare dtt here
 
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), dtt.msg.msg_type, 0) == -1)
+        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), channel, 0) == -1)
         {
             perror("[Secondary Server] Error while receiving message from the client");
             exit(EXIT_FAILURE);
         }
-
         else
         {
             printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
