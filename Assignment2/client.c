@@ -265,6 +265,11 @@ int main()
         printf("Enter Operation Number: ");
         scanf("%d", &operation);
 
+        if (operation == 5)
+        {
+            exit(EXIT_SUCCESS);
+        }
+
         int seq_num;
         printf("Enter Sequence Number: ");
         scanf("%d", &seq_num);
@@ -284,10 +289,6 @@ int main()
         else if (operation == 4)
         {
             operation_four(msg_queue_id, seq_num, message);
-        }
-        else if (operation == 5)
-        {
-            exit(EXIT_SUCCESS);
         }
         else
         {
