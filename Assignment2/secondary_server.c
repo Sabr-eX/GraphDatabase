@@ -351,7 +351,10 @@ void *dfs(void *arg)
         }
     }
 
+    dtt->starting_vertex = starting_vertex;
+    printf("[Secondary Server] Starting vertex: %d\n", starting_vertex);
     visited[starting_vertex] = 1;
+
     dfsThread(&dtt);
 
     // Exit the DFS thread
@@ -362,6 +365,7 @@ void dfsThread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
     int current_vertex = dtt->starting_vertex;
+    printf("[Secondary Server] Current vertex: %d\n", current_vertex);
     int *s = dtt->storage_pointer;
 
     int flag = 0;
@@ -374,9 +378,9 @@ void dfsThread(void *arg)
             visited[i] = 1;
 
             dtt->starting_vertex = i;
-            dtt->storage_pointer = &s;
+            dtt->storage_pointer = s;
 
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
+            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
         }
         else if ((i == number_of_nodes - 1) && (flag == 0))
         {
