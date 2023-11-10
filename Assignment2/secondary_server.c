@@ -306,7 +306,7 @@ void *dfs(void *arg)
     }
 
     int starting_vertex = *shmptr;
-    *shmptr = (int *)'*';
+    *shmptr = (int)'*';
     s = shmptr++;
 
     // Opening the Graph file to read the read the adjacency matrix
@@ -314,16 +314,16 @@ void *dfs(void *arg)
     if (fptr == NULL)
     {
         printf("[Seconday Server] Error opening file");
-        return 1;
+        exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d %d", &number_of_nodes);
+    fscanf(fptr, "%d", &number_of_nodes);
 
     while (!feof(fptr))
     {
         if (ferror(fptr))
         {
             printf("[Secondary Server] Error reading file");
-            return 1;
+            exit(EXIT_FAILURE);
         }
 
         for (int i = 0; i < number_of_nodes; i++)
@@ -346,6 +346,9 @@ void *dfs(void *arg)
             pthread_join(thread_id, NULL);
         }
     }
+
+    // Exit the DFS thread
+    pthread_exit(NULL);
 }
 
 void dfsThread(int current_vertex, int *s)
@@ -365,11 +368,10 @@ void dfsThread(int current_vertex, int *s)
         {
             *s = current_vertex;
             s++;
-            *s = (int *)' ';
+            *s = (int)' ';
             s++;
         }
     }
-    return NULL;
 }
 
 int main()
@@ -397,11 +399,10 @@ int main()
     }
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
-    // Store the thread_id for BFS thread
-    pthread_t bfs_thread_id;
+    // Store the thread_ids thread
+    pthread_t thread_ids[200];
 
     // Listen to the message queue for new requests from the clients
-
     while (1)
     {
         struct data_to_thread dtt; // Declare dtt here
@@ -416,7 +417,34 @@ int main()
         {
             printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
 
-            if (msg.data.operation == 4)
+            if (msg.data.operation == 3)
+            {
+                // Operation code for DFS request
+                // Create a data_to_thread structure
+                dtt.msg_queue_id = msg_queue_id;
+                dtt.msg = msg;
+
+                // Determine the channel based on seq_num
+                int channel;
+                if (msg.data.seq_num % 2 == 1)
+                {
+                    channel = SECONDARY_SERVER_CHANNEL_1;
+                }
+                else
+                {
+                    channel = SECONDARY_SERVER_CHANNEL_2;
+                }
+
+                // Set the channel in the message structure
+                dtt.msg.msg_type = channel;
+                // Create a new thread to handle BFS
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs, (void *)&dtt) != 0)
+                {
+                    perror("[Secondary Server] Error in DFS thread creation");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else if (msg.data.operation == 4)
             {
                 // Operation code for BFS request
                 // Create a data_to_thread structure
@@ -436,26 +464,19 @@ int main()
 
                 // Set the channel in the message structure
                 dtt.msg.msg_type = channel;
-
                 // Create a new thread to handle BFS
-                if (pthread_create(&bfs_thread_id, NULL, bfs, (void *)&dtt) != 0)
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs, (void *)&dtt) != 0)
                 {
                     perror("[Secondary Server] Error in BFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-
-                // Wait for the BFS thread to finish
-                pthread_join(bfs_thread_id, NULL);
             }
             else if (msg.data.operation == 5)
             {
                 // Operation code for cleanup
-
-                // Cleanup: Join the BFS thread
-                if (bfs_thread_id != 0)
+                for (int i = 0; i < 200; i++)
                 {
-                    pthread_join(bfs_thread_id, NULL);
-                    bfs_thread_id = 0;
+                    pthread_join(thread_ids[i], NULL);
                 }
             }
         }
