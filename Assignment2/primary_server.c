@@ -126,9 +126,6 @@ void *writeToNewGraphFile(void *arg)
     }
     else
     {
-        // Wait for the semaphore
-        sem_wait(read_sem);
-        sem_wait(write_sem);
         // Write the data to the file
         fprintf(fp, "%d\n", number_of_nodes);
         for (int i = 0; i < number_of_nodes; i++)
@@ -140,10 +137,6 @@ void *writeToNewGraphFile(void *arg)
             fprintf(fp, "\n");
         }
         fclose(fp);
-        sleep(5);
-        // Release the semaphore
-        sem_post(write_sem);
-        sem_post(read_sem);
     }
     printf("[Primary Server] Successfully written to the file %s for seq: %ld\n", filename, dtt->msg.data.seq_num);
 
@@ -151,7 +144,8 @@ void *writeToNewGraphFile(void *arg)
     dtt->msg.msg_type = dtt->msg.data.seq_num;
     dtt->msg.data.operation = 0;
 
-    printf("[Primary Server] Sending reply to the client %ld\n", dtt->msg.msg_type);
+    printf("[Primary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+    printf("[Primary Server] Message: %ld %ld %s\n", dtt->msg.data.seq_num, dtt->msg.data.operation, dtt->msg.data.graph_name);
     if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
     {
         perror("[Primary Server] Message could not be sent, please try again");
@@ -221,7 +215,7 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
-                pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)&dtt);
+                pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
             }
             else if (msg.data.operation == 5)
             {
