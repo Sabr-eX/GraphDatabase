@@ -126,6 +126,10 @@ void *writeToNewGraphFile(void *arg)
     }
     else
     {
+        printf("[Primary Server] Waiting for the semaphore to be available\n");
+        // Wait for the semaphore to be available
+        sem_wait(write_sem);
+        sem_wait(read_sem);
         // Write the data to the file
         fprintf(fp, "%d\n", number_of_nodes);
         for (int i = 0; i < number_of_nodes; i++)
@@ -137,6 +141,11 @@ void *writeToNewGraphFile(void *arg)
             fprintf(fp, "\n");
         }
         fclose(fp);
+        sleep(5);
+        // Release the semaphore
+        sem_post(read_sem);
+        sem_post(write_sem);
+        printf("[Primary Server] Released the semaphore\n");
     }
     printf("[Primary Server] Successfully written to the file %s for seq: %ld\n", filename, dtt->msg.data.seq_num);
 
