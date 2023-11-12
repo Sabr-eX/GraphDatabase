@@ -29,12 +29,9 @@
 #define MAX_THREADS 200
 #define MAX_VERTICES 100
 
-// Incorporate multithreading while traversing each evel
-
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
  */
-
 struct data
 {
     long seq_num;
@@ -45,7 +42,6 @@ struct data
 /**
  * The struct msg_buffer is used for message passing through message queues. It contains a message type and the struct data structure to carry the message data.
  */
-
 struct msg_buffer
 {
     long msg_type;
@@ -53,7 +49,13 @@ struct msg_buffer
 };
 
 /**
- * Used to pass data to threads for BFS and dfs processing. It includes a message queue ID and a message buffer.
+ * Used to pass data to threads for BFS and dfs processing.
+ * It includes a message queue ID and a message buffer.
+ * Starting vertex is the vertex from which the BFS or DFS starts.
+ * Storage pointer is used to store the SHM pointer address.
+ * Number of nodes is the number of nodes in the graph.
+ * Adjacency matrix is the adjacency matrix of the graph
+ * Visited is an array to keep track of visited nodes.
  */
 struct data_to_thread
 {
@@ -61,6 +63,9 @@ struct data_to_thread
     struct msg_buffer msg;
     int starting_vertex;
     int *storage_pointer;
+    int number_of_nodes;
+    int **adjacency_matrix;
+    int *visited;
 };
 
 /**
@@ -74,9 +79,6 @@ struct data_to_thread
 void *dfs(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-
-    int number_of_nodes;
-    int starting_vertex;
 
     // Connect to shared memory
     key_t shm_key;
@@ -98,7 +100,6 @@ void *dfs(void *arg)
         perror("[Secondary Server] Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
     }
-
     // Attach to the shared memory
     if ((shmptr = (int *)shmat(shm_id, NULL, 0)) == (void *)-1)
     {
@@ -106,7 +107,7 @@ void *dfs(void *arg)
         exit(EXIT_FAILURE);
     }
 
-    starting_vertex = *shmptr;
+    dtt->starting_vertex = *shmptr;
     *shmptr = (int)'*';
     s = shmptr++;
 
@@ -117,10 +118,16 @@ void *dfs(void *arg)
         printf("[Seconday Server] Error opening file");
         exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d", &number_of_nodes);
+    fscanf(fptr, "%d", dtt->number_of_nodes);
 
-    int adjacencyMatrix[number_of_nodes][number_of_nodes];
-    int visited[number_of_nodes];
+    printf("[Secondary Server] DFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
+    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", dtt->starting_vertex);
+
+    dtt->adjacency_matrix = (int **)malloc(dtt->number_of_nodes * sizeof(int *));
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        dtt->adjacency_matrix[i] = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+    }
 
     while (!feof(fptr))
     {
@@ -130,20 +137,43 @@ void *dfs(void *arg)
             exit(EXIT_FAILURE);
         }
 
-        for (int i = 0; i < number_of_nodes; i++)
+        for (int i = 0; i < dtt->number_of_nodes; i++)
         {
-            for (int j = 0; j < number_of_nodes; j++)
+            for (int j = 0; j < dtt->number_of_nodes; j++)
             {
-                fscanf(fptr, "%d", &adjacencyMatrix[i][j]);
+                fscanf(fptr, "%d", &dtt->adjacency_matrix[i][j]);
             }
         }
     }
 
-    dtt->starting_vertex = starting_vertex;
-    printf("[Secondary Server] Starting vertex: %d\n", starting_vertex);
-    visited[starting_vertex] = 1;
+    pthread_t dfs_thread_id[dtt->number_of_nodes];
 
-    dfsThread(&dtt);
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
+        {
+            dtt->visited[i] = 1;
+
+            dtt->starting_vertex = i;
+            dtt->storage_pointer = s;
+
+            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
+        }
+        else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
+        {
+            *s = current_vertex;
+            s++;
+            *s = (int)' ';
+            s++;
+        }
+    }
+    // Mark the starting vertex as visited
+    dtt->visited[dtt->starting_vertex] = 1;
+
+    // Create a new thread and pass the data_to_thread structure
+    // This starts the dfs
+    pthread_t dfs_thread;
+    pthread_create(&dfs_thread, NULL, dfsThread, (void *)&dtt);
 
     // Exit the DFS thread
     pthread_exit(NULL);
@@ -152,8 +182,9 @@ void *dfs(void *arg)
 void dfsThread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
+
     int current_vertex = dtt->starting_vertex;
-    printf("[Secondary Server] Current vertex: %d\n", current_vertex);
+    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", current_vertex);
     int *s = dtt->storage_pointer;
 
     int flag = 0;
