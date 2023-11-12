@@ -49,15 +49,40 @@ struct msg_buffer
  */
 void cleanup(int msg_queue_id)
 {
-    // TODO: Will have to ask primary and secondary servers to terminate
+    printf("[Load Balancer] Initiating cleanup process...\n");
+
+    // Inform servers about termination
+    struct msg_buffer terminationMessage;
+    terminationMessage.msg_type = PRIMARY_SERVER_CHANNEL;
+    terminationMessage.data.operation = 5; // Operation code for termination
+
+    if(msgsnd(msg_queue_id, &terminationMessage, sizeof(terminationMessage.data), 0) == -1){
+        perror("[Load Balancer] Error while sending cleanup message to Primary Server");
+    }
+
+    terminationMessage.msg_type = SECONDARY_SERVER_CHANNEL_1;
+    if(msgsnd(msg_queue_id, &terminationMessage, sizeof(terminationMessage.data), 0) == -1){
+        perror("[Load Balancer] Error while sending cleanup message to Secondary Server 1");
+    }
+
+    terminationMessage.msg_type = SECONDARY_SERVER_CHANNEL_2;
+    if(msgsnd(msg_queue_id, &terminationMessage, sizeof(terminationMessage.data), 0) == -1){
+        perror("[Load Balancer] Error while sending cleanup message to Secondaryary Server 2");
+    }
+
+    // Sleep for a while to allow servers to perform cleanup
+    sleep(5);
 
     // Destroy the message queue
-    while (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
+    if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
     {
         perror("[Load Balancer] Error while destroying the message queue");
     }
+
+    printf("[Load Balancer] Cleanup process completed. Exiting.\n");
     exit(EXIT_SUCCESS);
 }
+
 
 /**
  * @brief The load balancer is responsible for creating the message queue to be used for
