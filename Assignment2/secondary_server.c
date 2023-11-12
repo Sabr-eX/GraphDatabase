@@ -68,6 +68,44 @@ struct data_to_thread
     int *visited;
 };
 
+void *dfsThread(void *arg)
+{
+    struct data_to_thread *dtt = (struct data_to_thread *)arg;
+
+    int current_vertex = dtt->starting_vertex;
+    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", current_vertex);
+    int *s = dtt->storage_pointer;
+
+    int flag = 0;
+    pthread_t dfs_thread_id[dtt->number_of_nodes];
+
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
+        {
+            flag = 1;
+            dtt->visited[i] = 1;
+
+            dtt->starting_vertex = i;
+            dtt->storage_pointer = s;
+
+            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
+        }
+        else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
+        {
+            *s = current_vertex;
+            s++;
+            *s = (int)' ';
+            s++;
+        }
+    }
+
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+        pthread_join(dfs_thread_id[i], NULL);
+
+    pthread_exit(NULL);
+}
+
 /**
  * @brief Will be called by the main thread of the secondary server to perform DFS
  * It will find the starting vertex from the shared memory and then perform DFS
@@ -95,7 +133,7 @@ void *dfs(void *arg)
     }
     printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
     // Connect to the shared memory using the key
-    if ((shm_id = shmget(shm_key, sizeof(number_of_nodes), 0666)) < 0)
+    if ((shm_id = shmget(shm_key, sizeof(dtt->number_of_nodes), 0666)) < 0)
     {
         perror("[Secondary Server] Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
@@ -118,7 +156,7 @@ void *dfs(void *arg)
         printf("[Seconday Server] Error opening file");
         exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d", dtt->number_of_nodes);
+    fscanf(fptr, "%d", &(dtt->number_of_nodes));
 
     printf("[Secondary Server] DFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
     printf("[Secondary Server] DFS Request: Starting vertex: %d\n", dtt->starting_vertex);
@@ -129,29 +167,23 @@ void *dfs(void *arg)
         dtt->adjacency_matrix[i] = (int *)malloc(dtt->number_of_nodes * sizeof(int));
     }
 
-    while (!feof(fptr))
+    for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if (ferror(fptr))
+        for (int j = 0; j < dtt->number_of_nodes; j++)
         {
-            printf("[Secondary Server] Error reading file");
-            exit(EXIT_FAILURE);
-        }
-
-        for (int i = 0; i < dtt->number_of_nodes; i++)
-        {
-            for (int j = 0; j < dtt->number_of_nodes; j++)
-            {
-                fscanf(fptr, "%d", &dtt->adjacency_matrix[i][j]);
-            }
+            fscanf(fptr, "%d", &(dtt->adjacency_matrix[i][j]));
         }
     }
 
-    pthread_t dfs_thread_id[dtt->number_of_nodes];
+    printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
 
+    pthread_t dfs_thread_id[dtt->number_of_nodes];
+    int flag = 0;
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
+        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] != 0))
         {
+            flag = 1;
             dtt->visited[i] = 1;
 
             dtt->starting_vertex = i;
@@ -161,56 +193,18 @@ void *dfs(void *arg)
         }
         else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
         {
-            *s = current_vertex;
+            *s = dtt->starting_vertex;
             s++;
             *s = (int)' ';
             s++;
         }
     }
-    // Mark the starting vertex as visited
-    dtt->visited[dtt->starting_vertex] = 1;
 
-    // Create a new thread and pass the data_to_thread structure
-    // This starts the dfs
-    pthread_t dfs_thread;
-    pthread_create(&dfs_thread, NULL, dfsThread, (void *)&dtt);
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+        pthread_join(dfs_thread_id[i], NULL);
 
     // Exit the DFS thread
     pthread_exit(NULL);
-}
-
-void dfsThread(void *arg)
-{
-    struct data_to_thread *dtt = (struct data_to_thread *)arg;
-
-    int current_vertex = dtt->starting_vertex;
-    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", current_vertex);
-    int *s = dtt->storage_pointer;
-
-    int flag = 0;
-    pthread_t dfs_thread_id[number_of_nodes];
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        if ((adjacencyMatrix[dtt->starting_vertex][i] == 1) && (visited[i] == 0))
-        {
-            flag = 1;
-            visited[i] = 1;
-
-            dtt->starting_vertex = i;
-            dtt->storage_pointer = s;
-
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
-        }
-        else if ((i == number_of_nodes - 1) && (flag == 0))
-        {
-            *s = current_vertex;
-            s++;
-            *s = (int)' ';
-            s++;
-        }
-    }
-    for (int i = 0; i < number_of_nodes; i++)
-        pthread_join(dfs_thread_id[i], NULL);
 }
 
 int main()
@@ -258,7 +252,7 @@ int main()
     // Listen to the message queue for new requests from the clients
     while (1)
     {
-        struct data_to_thread dtt; // Declare dtt here
+        struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread)); // Declare dtt here
 
         if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), channel, 0) == -1)
         {
@@ -273,8 +267,8 @@ int main()
             {
                 // Operation code for DFS request
                 // Create a data_to_thread structure
-                dtt.msg_queue_id = msg_queue_id;
-                dtt.msg = msg;
+                dtt->msg_queue_id = msg_queue_id;
+                dtt->msg = msg;
 
                 // Determine the channel based on seq_num
                 int channel;
@@ -288,7 +282,7 @@ int main()
                 }
 
                 // Set the channel in the message structure
-                dtt.msg.msg_type = channel;
+                dtt->msg.msg_type = channel;
                 // Create a new thread to handle BFS
                 if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs, (void *)&dtt) != 0)
                 {
