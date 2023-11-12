@@ -233,6 +233,11 @@ int main()
                 {
                     pthread_join(thread_ids[i], NULL);
                 }
+                // sem_unlink(sema_name_read);
+                // sem_unlink(sema_name_write);
+                // if (shmctl(shm_id, IPC_RMID, NULL) == -1){
+                //     perror("[Primary Server] Error while removing shared memory segment\n");
+                // }
             }
         }
     }
