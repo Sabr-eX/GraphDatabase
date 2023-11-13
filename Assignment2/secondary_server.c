@@ -96,9 +96,10 @@ void *dfs_subthread(void *arg)
         {
             int leaf = dtt->current_vertex + 1;
             printf("[Secondary Server] DFS Sub Thread: New Leaf: %d\n", leaf);
+            printf("[Secondary Server] DFS Sub Thread: Storing %c at Index: %d\n", (char)(leaf + 48), dtt->index);
 
-            dtt->msg.data.graph_name[dtt->index] = leaf;
-            dtt->index++;
+            dtt->msg.data.graph_name[dtt->index] = (char)(leaf + 48);
+            dtt->index = dtt->index + 1;
             dtt->msg.data.graph_name[dtt->index] = '*';
         }
     }
@@ -202,24 +203,38 @@ void *dfs_mainthread(void *arg)
         {
             int leaf = dtt->current_vertex + 1;
             printf("[Secondary Server] DFS Main Thread: New Leaf: %d\n", leaf);
+            printf("[Secondary Server] DFS Main Thread: Storing %c at Index: %d\n", (char)(leaf + 48), dtt->index);
 
-            dtt->msg.data.graph_name[dtt->index] = leaf;
-            dtt->index++;
+            dtt->msg.data.graph_name[dtt->index] = (char)(leaf + 48);
+            dtt->index = dtt->index + 1;
             dtt->msg.data.graph_name[dtt->index] = '*';
         }
     }
 
+    dtt->msg.data.graph_name[++(dtt->index)] = '\0';
+
     // Send the list of Leaf Nodes to the client via message queue
     dtt->msg.msg_type = dtt->msg.data.seq_num;
-    struct msg_buffer dttMessage = dtt->msg;
-    if (msgsnd(0, &dttMessage, sizeof(dttMessage.data), 0) == -1)
+    dtt->msg.data.operation = 0;
+
+    printf("[Primary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+
+    if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
     {
-        perror("[Client] Message could not be sent, please try again");
+        perror("[Secondary Server] Message could not be sent, please try again");
+        exit(EXIT_FAILURE);
+    }
+
+    // Detach from the shared memory
+    if (shmdt(shmptr) == -1)
+    {
+        perror("[Secondary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
 
     // Exit the DFS thread
     printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
+    printf("[Secondary Server] Successfully Completed Operation 2\n");
     pthread_exit(NULL);
 }
 
@@ -301,7 +316,7 @@ int main()
                 dtt->msg.msg_type = channel;
                 dtt->index = 0;
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)&dtt) != 0)
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)dtt) != 0)
                 {
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);

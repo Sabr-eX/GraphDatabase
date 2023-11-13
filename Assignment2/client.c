@@ -205,7 +205,7 @@ void operation_three(int msg_queue_id, int seq_num, struct msg_buffer message)
 
         while (message.data.graph_name[i] != '*')
         {
-            printf("%c ", &message.data.graph_name[i]);
+            printf("%c ", message.data.graph_name[i]);
             i++;
         }
         printf("\n[Client] Operation done successfully\n");
