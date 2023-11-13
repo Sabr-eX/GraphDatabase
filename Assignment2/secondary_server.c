@@ -181,7 +181,6 @@ void *dfs(void *arg)
     int flag = 0;
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        printf("%d %d\n", dtt->adjacency_matrix[dtt->starting_vertex][i], dtt->visited[i]);
         if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
