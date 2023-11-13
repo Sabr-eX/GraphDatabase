@@ -62,19 +62,17 @@ struct data_to_thread
     int msg_queue_id;
     struct msg_buffer msg;
     int current_vertex;
-    // int *storage_pointer;
     int number_of_nodes;
     int **adjacency_matrix;
     int *visited;
 };
 
-void *dfsThread(void *arg)
+void *dfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
     int currentVertex = dtt->current_vertex + 1;
     printf("[Secondary Server] DFS Thread: Current vertex: %d\n", currentVertex);
-    // int *s = dtt->storage_pointer;
 
     int flag = 0;
     pthread_t dfs_thread_id[dtt->number_of_nodes];
@@ -87,28 +85,21 @@ void *dfsThread(void *arg)
             dtt->visited[i] = 1;
 
             dtt->current_vertex = i;
-            // dtt->storage_pointer = s;
 
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
+            pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)dtt);
             pthread_join(dfs_thread_id[i], NULL);
         }
         else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
-        {   int leaf = dtt->current_vertex + 1;
+        {
+            int leaf = dtt->current_vertex + 1;
             printf("[Secondary Server] DFS Thread: New Leaf: %d\n", leaf);
-            // *s = currentVertex;
-            // s++;
-            // *s = (int)' ';
-            // s++;
         }
     }
 
-    // for (int i = 0; i < dtt->number_of_nodes; i++)
-    //     pthread_join(dfs_thread_id[i], NULL);
-
+    // Exit the DFS thread
+    printf("[Secondary Server] DFS Thread: Exiting DFS Thread\n");
     pthread_exit(NULL);
 }
-
-
 
 /**
  * @brief Will be called by the main thread of the secondary server to perform DFS
@@ -118,7 +109,7 @@ void *dfsThread(void *arg)
  * @param arg
  * @return void*
  */
-void *dfs(void *arg)
+void *dfs_mainthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
@@ -150,8 +141,6 @@ void *dfs(void *arg)
     }
 
     dtt->current_vertex = *shmptr;
-    // *shmptr = (int)'*';
-    // s = shmptr++;
 
     // Opening the Graph file to read the read the adjacency matrix
     FILE *fptr = fopen(dtt->msg.data.graph_name, "r");
@@ -191,29 +180,30 @@ void *dfs(void *arg)
     {
         if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
+            printf("[Secondary Server] DFS Thread: %d Visited Array: ", i + 1);
+            for (int v = 0; v < dtt->number_of_nodes; v++)
+            {
+                printf("%d ", dtt->visited[v]);
+            }
+            printf("\n");
+
             flag = 1;
             dtt->visited[i] = 1;
 
             dtt->current_vertex = i;
-            // dtt->storage_pointer = s;
 
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
+            pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)dtt);
             pthread_join(dfs_thread_id[i], NULL);
         }
         else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
-        {   int leaf = dtt->current_vertex + 1;
+        {
+            int leaf = dtt->current_vertex + 1;
             printf("[Secondary Server] DFS Request: New Leaf: %d\n", leaf);
-            // *s = dtt->current_vertex;
-            // s++;
-            // *s = (int)' ';
-            // s++;
         }
     }
 
-    // for (int i = 0; i < dtt->number_of_nodes; i++)
-    //     pthread_join(dfs_thread_id[i], NULL);
-
     // Exit the DFS thread
+    printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
     pthread_exit(NULL);
 }
 
@@ -294,7 +284,7 @@ int main()
                 // Set the channel in the message structure
                 dtt->msg.msg_type = channel;
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs, (void *)&dtt) != 0)
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)&dtt) != 0)
                 {
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
