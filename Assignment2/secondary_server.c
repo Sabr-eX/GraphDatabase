@@ -61,8 +61,8 @@ struct data_to_thread
 {
     int msg_queue_id;
     struct msg_buffer msg;
-    int starting_vertex;
-    int *storage_pointer;
+    int current_vertex;
+    // int *storage_pointer;
     int number_of_nodes;
     int **adjacency_matrix;
     int *visited;
@@ -72,39 +72,43 @@ void *dfsThread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
-    int current_vertex = dtt->starting_vertex;
-    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", current_vertex);
-    int *s = dtt->storage_pointer;
+    int currentVertex = dtt->current_vertex + 1;
+    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", currentVertex);
+    // int *s = dtt->storage_pointer;
 
     int flag = 0;
     pthread_t dfs_thread_id[dtt->number_of_nodes];
 
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
+        if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
             dtt->visited[i] = 1;
 
-            dtt->starting_vertex = i;
-            dtt->storage_pointer = s;
+            dtt->current_vertex = i;
+            // dtt->storage_pointer = s;
 
             pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
+            pthread_join(dfs_thread_id[i], NULL);
         }
-        else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
-        {
-            *s = current_vertex;
-            s++;
-            *s = (int)' ';
-            s++;
+        else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
+        {   int leaf = dtt->current_vertex + 1;
+            printf("[Secondary Server] DFS Thread: New Leaf: %d\n", leaf);
+            // *s = currentVertex;
+            // s++;
+            // *s = (int)' ';
+            // s++;
         }
     }
 
-    for (int i = 0; i < dtt->number_of_nodes; i++)
-        pthread_join(dfs_thread_id[i], NULL);
+    // for (int i = 0; i < dtt->number_of_nodes; i++)
+    //     pthread_join(dfs_thread_id[i], NULL);
 
     pthread_exit(NULL);
 }
+
+
 
 /**
  * @brief Will be called by the main thread of the secondary server to perform DFS
@@ -121,7 +125,7 @@ void *dfs(void *arg)
     // Connect to shared memory
     key_t shm_key;
     int shm_id;
-    int *shmptr, *s;
+    int *shmptr;
 
     // Generate key for the shared memory
     // Here, we are using the seq_num as the key because
@@ -145,9 +149,9 @@ void *dfs(void *arg)
         exit(EXIT_FAILURE);
     }
 
-    dtt->starting_vertex = *shmptr;
-    *shmptr = (int)'*';
-    s = shmptr++;
+    dtt->current_vertex = *shmptr;
+    // *shmptr = (int)'*';
+    // s = shmptr++;
 
     // Opening the Graph file to read the read the adjacency matrix
     FILE *fptr = fopen(dtt->msg.data.graph_name, "r");
@@ -173,35 +177,41 @@ void *dfs(void *arg)
     }
 
     dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+    dtt->visited[dtt->current_vertex] = 1;
+    int startingNode = dtt->current_vertex + 1;
 
     printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] DFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
-    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", dtt->starting_vertex);
+    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", startingNode);
+
     pthread_t dfs_thread_id[dtt->number_of_nodes];
+
     int flag = 0;
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] != 1))
+        if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
             dtt->visited[i] = 1;
 
-            dtt->starting_vertex = i;
-            dtt->storage_pointer = s;
+            dtt->current_vertex = i;
+            // dtt->storage_pointer = s;
 
             pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
+            pthread_join(dfs_thread_id[i], NULL);
         }
-        else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
-        {
-            *s = dtt->starting_vertex;
-            s++;
-            *s = (int)' ';
-            s++;
+        else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
+        {   int leaf = dtt->current_vertex + 1;
+            printf("[Secondary Server] DFS Request: New Leaf: %d\n", leaf);
+            // *s = dtt->current_vertex;
+            // s++;
+            // *s = (int)' ';
+            // s++;
         }
     }
 
-    for (int i = 0; i < dtt->number_of_nodes; i++)
-        pthread_join(dfs_thread_id[i], NULL);
+    // for (int i = 0; i < dtt->number_of_nodes; i++)
+    //     pthread_join(dfs_thread_id[i], NULL);
 
     // Exit the DFS thread
     pthread_exit(NULL);
