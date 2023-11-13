@@ -88,6 +88,8 @@ void *dfs_subthread(void *arg)
 
             pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)dtt);
             pthread_join(dfs_thread_id[i], NULL);
+
+            dtt->current_vertex = currentVertex - 1;
         }
         else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
         {
@@ -194,6 +196,8 @@ void *dfs_mainthread(void *arg)
 
             pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)dtt);
             pthread_join(dfs_thread_id[i], NULL);
+
+            dtt->current_vertex = startingNode - 1;
         }
         else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
         {
