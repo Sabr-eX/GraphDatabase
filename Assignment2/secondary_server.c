@@ -129,6 +129,7 @@ void *dfs_mainthread(void *arg)
         exit(EXIT_FAILURE);
     }
     printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
+
     // Connect to the shared memory using the key
     if ((shm_id = shmget(shm_key, sizeof(dtt->number_of_nodes), 0666)) < 0)
     {
@@ -287,6 +288,7 @@ int main()
 
                 // Set the channel in the message structure
                 dtt->msg.msg_type = channel;
+
                 // Create a new thread to handle BFS
                 if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)&dtt) != 0)
                 {
