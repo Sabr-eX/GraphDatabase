@@ -89,7 +89,7 @@ void *dfsThread(void *arg)
             dtt->starting_vertex = i;
             dtt->storage_pointer = s;
 
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
+            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
         }
         else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
         {
@@ -181,7 +181,8 @@ void *dfs(void *arg)
     int flag = 0;
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] != 0))
+        printf("%d %d\n", dtt->adjacency_matrix[dtt->starting_vertex][i], dtt->visited[i]);
+        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
             dtt->visited[i] = 1;
@@ -189,7 +190,7 @@ void *dfs(void *arg)
             dtt->starting_vertex = i;
             dtt->storage_pointer = s;
 
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
+            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)dtt);
         }
         else if ((i == dtt->number_of_nodes - 1) && (flag == 0))
         {
