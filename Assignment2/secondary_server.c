@@ -158,9 +158,6 @@ void *dfs(void *arg)
     }
     fscanf(fptr, "%d", &(dtt->number_of_nodes));
 
-    printf("[Secondary Server] DFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
-    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", dtt->starting_vertex);
-
     dtt->adjacency_matrix = (int **)malloc(dtt->number_of_nodes * sizeof(int *));
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
@@ -175,13 +172,16 @@ void *dfs(void *arg)
         }
     }
 
-    printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
+    dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
 
+    printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
+    printf("[Secondary Server] DFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
+    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", dtt->starting_vertex);
     pthread_t dfs_thread_id[dtt->number_of_nodes];
     int flag = 0;
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] == 0))
+        if ((dtt->adjacency_matrix[dtt->starting_vertex][i] == 1) && (dtt->visited[i] != 1))
         {
             flag = 1;
             dtt->visited[i] = 1;
