@@ -47,41 +47,48 @@ struct data_to_thread
     
 };
 
-//Code for queue
+// Code for queue
 
 // Queue structure
-struct Queue {
+struct Queue
+{
     int items[MAX_QUEUE_SIZE];
     int front;
     int rear;
 };
 
 // Function to create an empty queue
-struct Queue* createQueue() {
-    struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
+struct Queue *createQueue()
+{
+    struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
     queue->front = -1;
     queue->rear = -1;
     return queue;
 }
 
 // Function to check if the queue is empty
-int isEmpty(struct Queue* queue) {
+int isEmpty(struct Queue *queue)
+{
     return queue->front == -1;
 }
 
 // Function to check if the queue is full
-int isFull(struct Queue* queue) {
+int isFull(struct Queue *queue)
+{
     return queue->rear == MAX_QUEUE_SIZE - 1;
 }
 
 // Function to enqueue an item to the queue
-void enqueue(struct Queue* queue, int value) {
-    if (isFull(queue)) {
+void enqueue(struct Queue *queue, int value)
+{
+    if (isFull(queue))
+    {
         printf("Queue is full. Cannot enqueue %d.\n", value);
         return;
     }
 
-    if (isEmpty(queue)) {
+    if (isEmpty(queue))
+    {
         queue->front = 0;
     }
 
@@ -91,10 +98,12 @@ void enqueue(struct Queue* queue, int value) {
 }
 
 // Function to dequeue an item from the queue
-int dequeue(struct Queue* queue) {
+int dequeue(struct Queue *queue)
+{
     int item;
 
-    if (isEmpty(queue)) {
+    if (isEmpty(queue))
+    {
         printf("Queue is empty. Cannot dequeue.\n");
         return -1;
     }
@@ -102,7 +111,8 @@ int dequeue(struct Queue* queue) {
     item = queue->items[queue->front];
     queue->front++;
 
-    if (queue->front > queue->rear) {
+    if (queue->front > queue->rear)
+    {
         // Reset the queue after all elements are dequeued
         queue->front = queue->rear = -1;
     }
@@ -112,8 +122,10 @@ int dequeue(struct Queue* queue) {
 }
 
 // Function to get the front item of the queue without removing it
-int front(struct Queue* queue) {
-    if (isEmpty(queue)) {
+int front(struct Queue *queue)
+{
+    if (isEmpty(queue))
+    {
         printf("Queue is empty.\n");
         return -1;
     }
@@ -122,27 +134,30 @@ int front(struct Queue* queue) {
 }
 
 // Function to print the elements of the queue
-void display(struct Queue* queue) {
+void display(struct Queue *queue)
+{
     int i;
-    if (isEmpty(queue)) {
+    if (isEmpty(queue))
+    {
         printf("Queue is empty.\n");
         return;
     }
 
     printf("Queue elements: ");
-    for (i = queue->front; i <= queue->rear; i++) {
+    for (i = queue->front; i <= queue->rear; i++)
+    {
         printf("%d ", queue->items[i]);
     }
     printf("\n");
 }
 
-void *bfsThread(void *arg)
+void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
     struct Queue *queue = createQueue();
     enqueue(queue, dtt->current_vertex);
-    dtt->visited[dtt->current_vertex]=1;
-    while(!isEmpty(queue))
+    dtt->visited[dtt->current_vertex] = 1;
+    while (!isEmpty(queue))
     {
     	int currentVertex= dequeue(queue);
     	dtt->bfs_result[dtt->bfs_result_index++] = currentVertex; //Record the order of traversal
@@ -156,58 +171,58 @@ void *bfsThread(void *arg)
             }
         }
     }
-	pthread_exit(NULL);
-    	
+    pthread_exit(NULL);
 }
 
-void *bfs(void *arg)
+void *bfs_mainthread(void *arg)
 {
-	struct data_to_thread *dtt = (struct data_to_thread *)arg;
-	//Connect to shared memory to retrieve the starting vertex
-	key_t shm_key;
-	int shm_id;
-	while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
-    	{
-        	perror("[Secondary Server] Error while generating key for shared memory");
-        	exit(EXIT_FAILURE);
-    	}
-    	printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
-    	// Connect to the shared memory using the key
-    	if ((shm_id = shmget(shm_key, sizeof(dtt->number_of_nodes), 0666)) == -1)
-    	{
-    	    perror("[Secondary Server] Error occurred while connecting to shm\n");
-        	exit(EXIT_FAILURE);
-    	}
-    	// Attach to the shared memory
-    	int *shmptr = (int *)shmat(shm_id, NULL, 0);
-    	if (shmptr == (void *)-1)
-    	{
-        	perror("[Secondary Server] Error in shmat \n");
-        	exit(EXIT_FAILURE);
-    	}
-    	dtt->current_vertex= *shmptr;
-    	FILE *fp;
-    	char filename[250];
-    	snprintf(filename, sizeof(filename), "%s", dtt->msg.data.graph_name);
-    	fp = fopen(filename, "r");
-    	if(fp==NULL)
-    	{
-    		perror("[Secondary Server] Error while opening the file");
-    		exit(EXIT_FAILURE);
-    	}
-    	fscanf(fp, "%d", &(dtt->number_of_nodes));
-    	dtt->adjacency_matrix = (int **)malloc(dtt->number_of_nodes * sizeof(int *));
-    	for (int i = 0; i < dtt->number_of_nodes; i++)
-    	{
-        	dtt->adjacency_matrix[i] = (int *)malloc(dtt->number_of_nodes * sizeof(int));
-    	}
-    	for (int i = 0; i < dtt->number_of_nodes; i++)
+    struct data_to_thread *dtt = (struct data_to_thread *)arg;
+    // Connect to shared memory to retrieve the starting vertex
+    key_t shm_key;
+    int shm_id;
+    while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
+    {
+        perror("[Secondary Server] Error while generating key for shared memory");
+        exit(EXIT_FAILURE);
+    }
+    printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
+    // Connect to the shared memory using the key
+    if ((shm_id = shmget(shm_key, sizeof(dtt->number_of_nodes), 0666)) == -1)
+    {
+        perror("[Secondary Server] Error occurred while connecting to shm\n");
+        exit(EXIT_FAILURE);
+    }
+    // Attach to the shared memory
+    int *shmptr = (int *)shmat(shm_id, NULL, 0);
+    if (shmptr == (void *)-1)
+    {
+        perror("[Secondary Server] Error in shmat \n");
+        exit(EXIT_FAILURE);
+    }
+
+    dtt->current_vertex = *shmptr;
+
+    FILE *fp;
+    char filename[250];
+    snprintf(filename, sizeof(filename), "%s", dtt->msg.data.graph_name);
+    fp = fopen(filename, "r");
+    if (fp == NULL)
+    {
+        perror("[Secondary Server] Error while opening the file");
+        exit(EXIT_FAILURE);
+    }
+    fscanf(fp, "%d", &(dtt->number_of_nodes));
+
+    dtt->adjacency_matrix = (int **)malloc(dtt->number_of_nodes * sizeof(int *));
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        dtt->adjacency_matrix[i] = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+    }
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        for (int j = 0; j < dtt->number_of_nodes; j++)
         {
-            for (int j = 0; j < dtt->number_of_nodes; j++)
-            {
-                fscanf(fp, "%d ", &(dtt->adjacency_matrix[i][j]));
-            }
-            
+            fscanf(fp, "%d ", &(dtt->adjacency_matrix[i][j]));
         }
         fclose(fp);
         //A few checks
@@ -255,6 +270,7 @@ void *bfs(void *arg)
     	}
     	printf("[Secondary Server] Successfully Completed Operation 1\n");
     	pthread_exit(NULL);
+
 }
 
 int main()
@@ -286,13 +302,13 @@ int main()
     pthread_t thread_ids[200];
 
     int channel;
-    if(msg.data.seq_num%2==1)
+    if (msg.data.seq_num % 2 == 1)
     {
-    	channel=SECONDARY_SERVER_CHANNEL_1;
+        channel = SECONDARY_SERVER_CHANNEL_1;
     }
     else
     {
-    	channel=SECONDARY_SERVER_CHANNEL_2;
+        channel = SECONDARY_SERVER_CHANNEL_2;
     }
     printf("[Secondary Server] Using Channel: %d\n", channel);
 
@@ -331,7 +347,7 @@ int main()
                 // Set the channel in the message structure
                 dtt->msg.msg_type = channel;
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs, (void *)&dtt) != 0)
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs_mainthread, (void *)dtt) != 0)
                 {
                     perror("[Secondary Server] Error in BFS thread creation");
                     exit(EXIT_FAILURE);
@@ -355,7 +371,3 @@ int main()
 
     return 0;
 }
-    	
-    	
-    	
-
