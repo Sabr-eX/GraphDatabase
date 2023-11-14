@@ -200,12 +200,12 @@ void operation_three(int msg_queue_id, int seq_num, struct msg_buffer message)
         {
             perror("[Client] Error while receiving message from secondary server");
         }
-        printf("[Client] Message received from the secondary Server: %ld\nThe list of Leaf Nodes is: \n", message.msg_type);
+        printf("[Client] Message received from the secondary Server: %ld\nThe list of Leaf Nodes while travelling from %d is: \n", message.msg_type, starting_vertex);
         int i = 0;
 
         while (message.data.graph_name[i] != '*')
         {
-            printf("%c ", message.data.graph_name[i]);
+            printf("%d ", message.data.graph_name[i]);
             i++;
         }
         printf("\n[Client] Operation done successfully\n");

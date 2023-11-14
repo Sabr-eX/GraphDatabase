@@ -98,7 +98,7 @@ void *dfs_subthread(void *arg)
             printf("[Secondary Server] DFS Sub Thread: New Leaf: %d\n", leaf);
             printf("[Secondary Server] DFS Sub Thread: Storing %c at Index: %d\n", (char)(leaf + 48), dtt->index);
 
-            dtt->msg.data.graph_name[dtt->index] = (char)(leaf + 48);
+            dtt->msg.data.graph_name[dtt->index] = (char)(leaf);
             dtt->index = dtt->index + 1;
             dtt->msg.data.graph_name[dtt->index] = '*';
         }
@@ -205,7 +205,7 @@ void *dfs_mainthread(void *arg)
             printf("[Secondary Server] DFS Main Thread: New Leaf: %d\n", leaf);
             printf("[Secondary Server] DFS Main Thread: Storing %c at Index: %d\n", (char)(leaf + 48), dtt->index);
 
-            dtt->msg.data.graph_name[dtt->index] = (char)(leaf + 48);
+            dtt->msg.data.graph_name[dtt->index] = (char)(leaf);
             dtt->index = dtt->index + 1;
             dtt->msg.data.graph_name[dtt->index] = '*';
         }
@@ -234,7 +234,7 @@ void *dfs_mainthread(void *arg)
 
     // Exit the DFS thread
     printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
-    printf("[Secondary Server] Successfully Completed Operation 2\n");
+    printf("[Secondary Server] Successfully Completed Operation 3\n");
     pthread_exit(NULL);
 }
 
