@@ -71,8 +71,6 @@ struct data_to_thread
     int bfs_result_index;
 };
 
-
-
 void *dfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -195,7 +193,7 @@ void *dfs_mainthread(void *arg)
         if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
-            dtt->visited[i] = 1;	
+            dtt->visited[i] = 1;
 
             dtt->current_vertex = i;
 
@@ -249,7 +247,7 @@ void *bfs_subthread(void *arg)
     int currentVertex = dtt->current_vertex + 1;
     printf("[Secondary Server] BFS Thread: Current vertex: %d\n", currentVertex);
     pthread_t subthread_id[dtt->number_of_nodes];
-    int thread_count=0;
+    int thread_count = 0;
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
         if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
@@ -262,7 +260,7 @@ void *bfs_subthread(void *arg)
             pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
             thread_count++;
         }
-        //for the last node
+        // for the last node
         else if (i == (dtt->number_of_nodes - 1))
         {
             // Process leaf node
@@ -274,7 +272,6 @@ void *bfs_subthread(void *arg)
             dtt->msg.data.graph_name[dtt->index] = '*';
         }
     }
-    
 
     // Process nodes at the next level with subthreads
     for (int i = 0; i < dtt->number_of_nodes; i++)
@@ -340,78 +337,74 @@ void *bfs_mainthread(void *arg)
         fclose(fp);
         // A few checks
         dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
-        dtt->visited[dtt->current_vertex] = 0; 
+        dtt->visited[dtt->current_vertex] = 0;
         int startingNode = dtt->current_vertex + 1;
 
         printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
         printf("[Secondary Server] BFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
         printf("[Secondary Server] BFS Request: Starting vertex: %d\n", startingNode);
 
-	printf("[Secondary Server] BFS Main Thread: Starting BFS for graph %s\n", dtt->msg.data.graph_name);
+        printf("[Secondary Server] BFS Main Thread: Starting BFS for graph %s\n", dtt->msg.data.graph_name);
         pthread_t subthread_id[dtt->number_of_nodes];
         int currentVertex = dtt->current_vertex + 1;
-   	 int thread_count=0;
-    for (int i = 0; i < dtt->number_of_nodes; i++)
-    {
-        if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
+        int thread_count = 0;
+        for (int i = 0; i < dtt->number_of_nodes; i++)
         {
-            // Process the current node
-            int node = i + 1;
-            printf("[Secondary Server] BFS Thread: Processing node %d\n", node);
-            dtt->visited[i] = 1;
-            dtt->bfs_result[dtt->bfs_result_index++] = node;
-            pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
-            thread_count++;
+            if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
+            {
+                // Process the current node
+                int node = i + 1;
+                printf("[Secondary Server] BFS Thread: Processing node %d\n", node);
+                dtt->visited[i] = 1;
+                dtt->bfs_result[dtt->bfs_result_index++] = node;
+                pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
+                thread_count++;
+            }
+            // for the last node
+            else if (i == (dtt->number_of_nodes - 1))
+            {
+                // Process leaf node
+                printf("[Secondary Server] BFS Thread: New Leaf: %d\n", currentVertex);
+
+                // Store the leaf node in the graph name
+                dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex + 48);
+                dtt->index = dtt->index + 1;
+                dtt->msg.data.graph_name[dtt->index] = '*';
+            }
         }
-        //for the last node
-        else if (i == (dtt->number_of_nodes - 1))
+
+        dtt->msg.data.graph_name[++(dtt->index)] = '\0';
+
+        // Process nodes at the next level with subthreads
+        for (int i = 0; i < dtt->number_of_nodes; i++)
         {
-            // Process leaf node
-            printf("[Secondary Server] BFS Thread: New Leaf: %d\n", currentVertex);
-
-            // Store the leaf node in the graph name
-            dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex + 48);
-            dtt->index = dtt->index + 1;
-            dtt->msg.data.graph_name[dtt->index] = '*';
+            pthread_join(subthread_id[i], NULL);
         }
-    }
-    
-    dtt->msg.data.graph_name[++(dtt->index)] = '\0';
-    
-
-    // Process nodes at the next level with subthreads
-    for (int i = 0; i < dtt->number_of_nodes; i++)
-    {
-        pthread_join(subthread_id[i], NULL);
-    }
 
         dtt->msg.msg_type = dtt->msg.data.seq_num;
-    	dtt->msg.data.operation = 0;
-	memcpy(dtt->msg.data.graph_name, dtt->bfs_result, dtt->bfs_result_index * sizeof(int));
-    	printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+        dtt->msg.data.operation = 0;
+        memcpy(dtt->msg.data.graph_name, dtt->bfs_result, dtt->bfs_result_index * sizeof(int));
+        printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
 
-    	if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
-    	{	
-        	perror("[Secondary Server] Message could not be sent, please try again");
-        	exit(EXIT_FAILURE);
-    	}
+        if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
+        {
+            perror("[Secondary Server] Message could not be sent, please try again");
+            exit(EXIT_FAILURE);
+        }
 
-    	// Detach from the shared memory
-    	if (shmdt(shmptr) == -1)
-    	{
-        	perror("[Secondary Server] Could not detach from shared memory\n");
-        	exit(EXIT_FAILURE);
-    	}
+        // Detach from the shared memory
+        if (shmdt(shmptr) == -1)
+        {
+            perror("[Secondary Server] Could not detach from shared memory\n");
+            exit(EXIT_FAILURE);
+        }
 
-    	// Exit the BFS thread
-    	printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
-    	printf("[Secondary Server] Successfully Completed Operation 4\n");
-    	pthread_exit(NULL);
+        // Exit the BFS thread
+        printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
+        printf("[Secondary Server] Successfully Completed Operation 4\n");
+        pthread_exit(NULL);
+    }
 }
-
-
-}
-
 
 int main()
 {
@@ -499,7 +492,7 @@ int main()
             }
             else if (msg.data.operation == 4)
             {
-            	// Operation code for DFS request
+                // Operation code for DFS request
                 // Create a data_to_thread structure
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
@@ -524,7 +517,6 @@ int main()
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-            
             }
             else if (msg.data.operation == 5)
             {
