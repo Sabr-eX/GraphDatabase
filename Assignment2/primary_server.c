@@ -228,11 +228,18 @@ int main()
             }
             else if (msg.data.operation == 5)
             {
+                int st = time(NULL);
                 // Cleanup
                 for (int i = 0; i < 200; i++)
                 {
                     pthread_join(thread_ids[i], NULL);
                 }
+                int end = time(NULL);
+                int diff = end - st;
+                
+                printf("[Primary Server] Terminating... in %d sec",diff);
+                
+                exit(EXIT_SUCCESS);
             }
         }
     }

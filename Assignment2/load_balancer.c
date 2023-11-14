@@ -67,11 +67,12 @@ void cleanup(int msg_queue_id)
 
     terminationMessage.msg_type = SECONDARY_SERVER_CHANNEL_2;
     if(msgsnd(msg_queue_id, &terminationMessage, sizeof(terminationMessage.data), 0) == -1){
-        perror("[Load Balancer] Error while sending cleanup message to Secondaryary Server 2");
+        perror("[Load Balancer] Error while sending cleanup message to Secondary Server 2");
     }
 
     // Sleep for a while to allow servers to perform cleanup
     sleep(5);
+    
 
     // Destroy the message queue
     if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)

@@ -328,10 +328,16 @@ int main()
             else if (msg.data.operation == 5)
             {
                 // Operation code for cleanup
+                int st = time(NULL);
                 for (int i = 0; i < 200; i++)
                 {
                     pthread_join(thread_ids[i], NULL);
                 }
+                int end = time(NULL);
+                int diff = end - st;
+                
+                printf("[Secondaryy Server] Terminating... in %d sec",diff);
+                exit(EXIT_SUCCESS);
             }
         }
     }
