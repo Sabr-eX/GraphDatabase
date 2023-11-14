@@ -71,109 +71,7 @@ struct data_to_thread
     int bfs_result_index;
 };
 
-// Code for queue
 
-// Queue structure
-struct Queue
-{
-    int items[MAX_QUEUE_SIZE];
-    int front;
-    int rear;
-};
-
-// Function to create an empty queue
-struct Queue *createQueue()
-{
-    struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
-    queue->front = -1;
-    queue->rear = -1;
-    return queue;
-}
-
-// Function to check if the queue is empty
-int isEmpty(struct Queue *queue)
-{
-    return queue->front == -1;
-}
-
-// Function to check if the queue is full
-int isFull(struct Queue *queue)
-{
-    return queue->rear == MAX_QUEUE_SIZE - 1;
-}
-
-// Function to enqueue an item to the queue
-void enqueue(struct Queue *queue, int value)
-{
-    if (isFull(queue))
-    {
-        printf("Queue is full. Cannot enqueue %d.\n", value);
-        return;
-    }
-
-    if (isEmpty(queue))
-    {
-        queue->front = 0;
-    }
-
-    queue->rear++;
-    queue->items[queue->rear] = value;
-    printf("Enqueued %d to the queue.\n", value);
-}
-
-// Function to dequeue an item from the queue
-int dequeue(struct Queue *queue)
-{
-    int item;
-
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty. Cannot dequeue.\n");
-        return -1;
-    }
-
-    item = queue->items[queue->front];
-    queue->front++;
-
-    if (queue->front > queue->rear)
-    {
-        // Reset the queue after all elements are dequeued
-        queue->front = queue->rear = -1;
-    }
-
-    printf("Dequeued %d from the queue.\n", item);
-    return item;
-}
-
-// Function to get the front item of the queue without removing it
-int front(struct Queue *queue)
-{
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty.\n");
-        return -1;
-    }
-
-    return queue->items[queue->front];
-}
-
-// Function to print the elements of the queue
-void display(struct Queue *queue)
-{
-    int i;
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty.\n");
-        return;
-    }
-
-    printf("Queue elements: ");
-    for (i = queue->front; i <= queue->rear; i++)
-    {
-        printf("%d ", queue->items[i]);
-    }
-    printf("\n");
-}
 
 void *dfs_subthread(void *arg)
 {
@@ -297,7 +195,7 @@ void *dfs_mainthread(void *arg)
         if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
-            dtt->visited[i] = 1;
+            dtt->visited[i] = 1;	
 
             dtt->current_vertex = i;
 
@@ -348,23 +246,44 @@ void *dfs_mainthread(void *arg)
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-    struct Queue *queue = createQueue();
-    enqueue(queue, dtt->current_vertex);
-    dtt->visited[dtt->current_vertex] = 1;
-    while (!isEmpty(queue))
+    int currentVertex = dtt->current_vertex + 1;
+    printf("[Secondary Server] BFS Thread: Current vertex: %d\n", currentVertex);
+    pthread_t subthread_id[dtt->number_of_nodes];
+    int thread_count=0;
+    for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        int currentVertex = dequeue(queue);
-        dtt->bfs_result[dtt->bfs_result_index++] = currentVertex; // Record the order of traversal
-        // printf("[Secondary Server] BFS Thread: Current vertex: %d\n", currentVertex);
-        for (int i = 0; i < dtt->number_of_nodes; i++)
+        if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
         {
-            if (dtt->adjacency_matrix[currentVertex][i] == 1 && dtt->visited[i] == 0)
-            {
-                enqueue(queue, i);
-                dtt->visited[i] = 1;
-            }
+            // Process the current node
+            int node = i + 1;
+            printf("[Secondary Server] BFS Thread: Processing node %d\n", node);
+            dtt->visited[i] = 1;
+            dtt->bfs_result[dtt->bfs_result_index++] = node;
+            pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
+            thread_count++;
+        }
+        //for the last node
+        else if (i == (dtt->number_of_nodes - 1))
+        {
+            // Process leaf node
+            printf("[Secondary Server] BFS Thread: New Leaf: %d\n", currentVertex);
+
+            // Store the leaf node in the graph name
+            dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex + 48);
+            dtt->index = dtt->index + 1;
+            dtt->msg.data.graph_name[dtt->index] = '*';
         }
     }
+    
+
+    // Process nodes at the next level with subthreads
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        pthread_join(subthread_id[i], NULL);
+    }
+
+    // Exit the BFS thread
+    printf("[Secondary Server] BFS Thread: Exiting BFS Thread\n");
     pthread_exit(NULL);
 }
 
@@ -421,34 +340,54 @@ void *bfs_mainthread(void *arg)
         fclose(fp);
         // A few checks
         dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
-        dtt->visited[dtt->current_vertex] = 1;
+        dtt->visited[dtt->current_vertex] = 0; 
         int startingNode = dtt->current_vertex + 1;
 
         printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
         printf("[Secondary Server] BFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
         printf("[Secondary Server] BFS Request: Starting vertex: %d\n", startingNode);
 
-        pthread_t bfs_thread_id[dtt->number_of_nodes];
-        if (pthread_create(&bfs_thread_id[dtt->current_vertex], NULL, bfs_subthread, (void *)dtt) != 0)
+	printf("[Secondary Server] BFS Main Thread: Starting BFS for graph %s\n", dtt->msg.data.graph_name);
+        pthread_t subthread_id[dtt->number_of_nodes];
+        int currentVertex = dtt->current_vertex + 1;
+   	 int thread_count=0;
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
         {
-            perror("[Secondary Server] Error in BFS thread creation");
-            exit(EXIT_FAILURE);
+            // Process the current node
+            int node = i + 1;
+            printf("[Secondary Server] BFS Thread: Processing node %d\n", node);
+            dtt->visited[i] = 1;
+            dtt->bfs_result[dtt->bfs_result_index++] = node;
+            pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
+            thread_count++;
         }
-        // Join all BFS threads
-        for (int i = 0; i < dtt->number_of_nodes; i++)
+        //for the last node
+        else if (i == (dtt->number_of_nodes - 1))
         {
-            pthread_join(bfs_thread_id[i], NULL);
+            // Process leaf node
+            printf("[Secondary Server] BFS Thread: New Leaf: %d\n", currentVertex);
+
+            // Store the leaf node in the graph name
+            dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex + 48);
+            dtt->index = dtt->index + 1;
+            dtt->msg.data.graph_name[dtt->index] = '*';
         }
+    }
+    
+    dtt->msg.data.graph_name[++(dtt->index)] = '\0';
+    
+
+    // Process nodes at the next level with subthreads
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        pthread_join(subthread_id[i], NULL);
+    }
 
         dtt->msg.msg_type = dtt->msg.data.seq_num;
     	dtt->msg.data.operation = 0;
-
-    	// Assuming bfs_result is an array to store the BFS result
-   	for (int i = 0; i < dtt->bfs_result_index; i++)
-    	{
-        	dtt->msg.data.graph_name[i] = dtt->bfs_result[i];
-    	}
-
+	memcpy(dtt->msg.data.graph_name, dtt->bfs_result, dtt->bfs_result_index * sizeof(int));
     	printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
 
     	if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
