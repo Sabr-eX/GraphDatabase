@@ -31,6 +31,7 @@ struct msg_buffer
 {
     long msg_type;
     struct data data;
+    int bfs_result[MAX_NODES];
 };
 
 struct data_to_thread
@@ -41,6 +42,9 @@ struct data_to_thread
     int number_of_nodes;
     int **adjacency_matrix;
     int *visited;
+    int bfs_result[MAX_NODES];
+    int bfs_result_index;
+    
 };
 
 //Code for queue
@@ -141,6 +145,7 @@ void *bfsThread(void *arg)
     while(!isEmpty(queue))
     {
     	int currentVertex= dequeue(queue);
+    	dtt->bfs_result[dtt->bfs_result_index++] = currentVertex; //Record the order of traversal
     	//printf("[Secondary Server] BFS Thread: Current vertex: %d\n", currentVertex);
 	for (int i = 0; i < dtt->number_of_nodes; i++)
         {
@@ -220,9 +225,36 @@ void *bfs(void *arg)
         	perror("[Secondary Server] Error in BFS thread creation");
         	exit(EXIT_FAILURE);
     	}
-    	pthread_join(bfs_thread_id[dtt->current_vertex], NULL);
+    	// Join all BFS threads
+	for (int i = 0; i < dtt->number_of_nodes; i++)
+	{
+    		pthread_join(bfs_thread_id[i], NULL);
+	}
 
-    pthread_exit(NULL);
+    	
+    	//Sending result back to client
+    	dtt->msg.msg_type = dtt->msg.data.seq_num;
+    	dtt->msg.data.operation = 0;
+    	
+    	printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+    	for (int i = 0; i < dtt->bfs_result_index; i++)
+    	{
+        	dtt->msg.bfs_result[i] = dtt->bfs_result[i];
+    	}
+
+    	if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg), 0) == -1)
+    	{
+        	perror("[Secondary Server] Result of BFS could not be sent, please try again");
+        	exit(EXIT_FAILURE);
+    	}
+    	// Detach from the shared memory
+    	if (shmdt(shmptr) == -1)
+    	{
+        	perror("[Secondary Server] Could not detach from shared memory\n");
+        	exit(EXIT_FAILURE);
+    	}
+    	printf("[Secondary Server] Successfully Completed Operation 1\n");
+    	pthread_exit(NULL);
 }
 
 int main()
