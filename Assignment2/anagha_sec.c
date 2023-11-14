@@ -31,7 +31,6 @@ struct msg_buffer
 {
     long msg_type;
     struct data data;
-    int bfs_result[MAX_NODES];
 };
 
 struct data_to_thread
@@ -245,30 +244,38 @@ void *bfs_mainthread(void *arg)
             pthread_join(bfs_thread_id[i], NULL);
         }
 
-        // Sending result back to client
         dtt->msg.msg_type = dtt->msg.data.seq_num;
-        dtt->msg.data.operation = 0;
+    	dtt->msg.data.operation = 0;
 
-        printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
-        for (int i = 0; i < dtt->bfs_result_index; i++)
-        {
-            dtt->msg.bfs_result[i] = dtt->bfs_result[i];
-        }
+    	// Assuming bfs_result is an array to store the BFS result
+   	for (int i = 0; i < dtt->bfs_result_index; i++)
+    	{
+        	dtt->msg.data.graph_name[i] = dtt->bfs_result[i];
+    	}
 
-        if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg), 0) == -1)
-        {
-            perror("[Secondary Server] Result of BFS could not be sent, please try again");
-            exit(EXIT_FAILURE);
-        }
-        // Detach from the shared memory
-        if (shmdt(shmptr) == -1)
-        {
-            perror("[Secondary Server] Could not detach from shared memory\n");
-            exit(EXIT_FAILURE);
-        }
-        printf("[Secondary Server] Successfully Completed Operation 1\n");
-        pthread_exit(NULL);
-    }
+    	printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+
+    	if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
+    	{	
+        	perror("[Secondary Server] Message could not be sent, please try again");
+        	exit(EXIT_FAILURE);
+    	}
+
+    	// Detach from the shared memory
+    	if (shmdt(shmptr) == -1)
+    	{
+        	perror("[Secondary Server] Could not detach from shared memory\n");
+        	exit(EXIT_FAILURE);
+    	}
+
+    	// Exit the BFS thread
+    	printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
+    	printf("[Secondary Server] Successfully Completed Operation 4\n");
+    	pthread_exit(NULL);
+}
+
+
+}
 
     int main()
     {
