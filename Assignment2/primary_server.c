@@ -204,7 +204,7 @@ int main()
     printf("[Primary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids
-    pthread_t thread_ids[MAX_THREADS];
+    pthread_t thread_ids[MAX_THREADS] = {0};
 
     // Listen to the message queue for new requests from the clients
     while (1)
@@ -231,13 +231,15 @@ int main()
                 // Cleanup
                 for (int i = 0; i < 200; i++)
                 {
-                    pthread_join(thread_ids[i], NULL);
+                    //printf("%d %lu\n",i,thread_ids[i]);
+                    if (thread_ids[i] != 0){
+                        if(pthread_join(thread_ids[i], NULL) != 0){
+                            perror("[Primary Server] Error joining thread");
+                        }
+                    }
                 }
-                // sem_unlink(sema_name_read);
-                // sem_unlink(sema_name_write);
-                // if (shmctl(shm_id, IPC_RMID, NULL) == -1){
-                //     perror("[Primary Server] Error while removing shared memory segment\n");
-                // }
+                printf("[Primary Server] Terminating...\n");
+                exit(EXIT_SUCCESS);
             }
         }
     }

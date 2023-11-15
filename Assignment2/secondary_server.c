@@ -432,7 +432,7 @@ int main()
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids thread
-    pthread_t thread_ids[200];
+    pthread_t thread_ids[200] = {0};
 
     int channel;
     printf("[Secondary Server] Enter the channel number: ");
@@ -521,8 +521,15 @@ int main()
                 // Operation code for cleanup
                 for (int i = 0; i < 200; i++)
                 {
-                    pthread_join(thread_ids[i], NULL);
+                    //printf("%d %lu\n",i,thread_ids[i]);
+                    if (thread_ids[i] != 0){
+                        if(pthread_join(thread_ids[i], NULL) != 0){
+                            perror("[Secondary Server] Error joining thread");
+                        }
+                    }
                 }
+                printf("[Secondary Server] Terminating...\n");
+                exit(EXIT_SUCCESS);
             }
         }
     }
