@@ -344,10 +344,7 @@ void *bfs_mainthread(void *arg)
     }
     fclose(fp);
 
-    //Creadting a mutex
-    pthread_mutex_t lock;
-
-    dtt->mutexLock = lock;
+    
 
     // A few checks
     dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
