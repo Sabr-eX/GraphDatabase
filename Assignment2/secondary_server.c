@@ -68,6 +68,7 @@ struct data_to_thread
     int **adjacency_matrix;
     int *visited;
     pthread_mutex_t mutexLock; 
+    pthread_barrier_t bfs_barrier;
 };
 
 void *dfs_subthread(void *arg)
@@ -246,9 +247,14 @@ void *bfs_subthread(void *arg)
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
     int currentVertex = dtt->current_vertex + 1;
     printf("[Secondary Server] BFS Sub Thread: Current vertex: %d\n", currentVertex);
+    //Barrier intialization
+    if (pthread_barrier_init(&dtt->bfs_barrier, NULL, dtt->number_of_nodes) != 0)
+    {
+        perror("[Secondary Server] Error in initializing BFS barrier");
+        exit(EXIT_FAILURE);
+    }
     pthread_t subthread_id[dtt->number_of_nodes];
-    
-
+   
     pthread_mutex_lock(&dtt->mutexLock); 
     dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex);
     dtt->index = dtt->index + 1;
@@ -267,17 +273,15 @@ void *bfs_subthread(void *arg)
             pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
             
         }
-        // for the last node
-        // else if (i == (dtt->number_of_nodes - 1))
-        // {
-        //     // Process leaf node
-        //     printf("[Secondary Server] BFS Thread: New Leaf: %d\n", currentVertex);
-
-        //     // Store the leaf node in the graph name
-        //     dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex + 48);
-        //     dtt->index = dtt->index + 1;
-        //     dtt->msg.data.graph_name[dtt->index] = '*';
-        // }
+        
+    }
+    
+    //Synchronize at barrier
+    int status = pthread_barrier_wait(&dtt->bfs_barrier);
+    if (status != 0 && status != PTHREAD_BARRIER_SERIAL_THREAD)
+    {
+        perror("[Secondary Server] Error in barrier synchronization");
+        exit(EXIT_FAILURE);
     }
 
     // Process nodes at the next level with subthreads
@@ -285,7 +289,8 @@ void *bfs_subthread(void *arg)
     {
         pthread_join(subthread_id[i], NULL);
     }
-
+    
+    pthread_barrier_destroy(&dtt->bfs_barrier);
     // Exit the BFS thread
     printf("[Secondary Server] BFS Thread: Exiting BFS Thread\n");
     pthread_exit(NULL);
@@ -356,6 +361,13 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] BFS Request: Starting vertex: %d\n", startingNode);
 
     printf("[Secondary Server] BFS Main Thread: Starting BFS for graph %s\n", dtt->msg.data.graph_name);
+    
+    //Barrier intialization
+    if (pthread_barrier_init(&dtt->bfs_barrier, NULL, dtt->number_of_nodes) != 0)
+    {
+        perror("[Secondary Server] Error in initializing BFS barrier");
+        exit(EXIT_FAILURE);
+    }
 
     pthread_t subthread_id[dtt->number_of_nodes];
     
@@ -377,20 +389,17 @@ void *bfs_mainthread(void *arg)
             pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
             
         }
-        // for the last node
-        // else if (i == (dtt->number_of_nodes - 1))
-        // {
-        //     // Process leaf node
-        //     printf("[Secondary Server] BFS Thread: New Leaf: %d\n", currentVertex);
-
-        //     // Store the leaf node in the graph name
-        //     dtt->msg.data.graph_name[dtt->index] = (char)(currentVertex + 48);
-        //     dtt->index = dtt->index + 1;
-        //     dtt->msg.data.graph_name[dtt->index] = '*';
-        // }
+        
     }
 
     dtt->msg.data.graph_name[++(dtt->index)] = '\0';
+    //Synchrnize at barrier
+    int status = pthread_barrier_wait(&dtt->bfs_barrier);
+    if (status != 0 && status != PTHREAD_BARRIER_SERIAL_THREAD)
+    {
+        perror("[Secondary Server] Error in barrier synchronization");
+        exit(EXIT_FAILURE);
+    }
 
     // Process nodes at the next level with subthreads
     for (int i = 0; i < dtt->number_of_nodes; i++)
@@ -415,6 +424,8 @@ void *bfs_mainthread(void *arg)
         perror("[Secondary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
+    
+    pthread_barrier_destroy(&dtt->bfs_barrier);
 
     // Exit the BFS thread
     printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
