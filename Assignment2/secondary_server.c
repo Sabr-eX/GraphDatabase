@@ -58,6 +58,12 @@ struct msg_buffer
  * Adjacency matrix is the adjacency matrix of the graph
  * Visited is an array to keep track of visited nodes.
  */
+ 
+struct current_vertex_data
+{
+	int cv;
+};
+
 struct data_to_thread
 {
     int msg_queue_id;
@@ -69,7 +75,11 @@ struct data_to_thread
     int *visited;
     pthread_mutex_t mutexLock; 
     pthread_barrier_t bfs_barrier;
+    //note the change
+    struct current_vertex_data cvdata;
 };
+
+
 
 void *dfs_subthread(void *arg)
 {
@@ -245,7 +255,7 @@ void *dfs_mainthread(void *arg)
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-    int currentVertex = dtt->current_vertex + 1;
+    int currentVertex = dtt->cvdata.cv + 1;
     printf("[Secondary Server] BFS Sub Thread: Current vertex: %d\n", currentVertex);
     //Barrier intialization
     if (pthread_barrier_init(&dtt->bfs_barrier, NULL, dtt->number_of_nodes) != 0)
@@ -266,10 +276,14 @@ void *bfs_subthread(void *arg)
         if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
         {
             // Process the current node
-            int node = i + 1;
+            
+            int node = i + 1; //make changes here?
             printf("[Secondary Server] BFS Thread: Processing node %d\n", node);
             dtt->visited[i] = 1;
-            // dtt->bfs_result[dtt->bfs_result_index++] = node;
+            
+            struct current_vertex_data *cv_data= malloc(sizeof(struct current_vertex_data));
+            cv_data->cv=i+1;
+            dtt->cvdata= *cv_data;
             pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
             
         }
@@ -322,7 +336,7 @@ void *bfs_mainthread(void *arg)
         exit(EXIT_FAILURE);
     }
    
-    dtt->current_vertex = *shmptr;
+    dtt->cvdata.cv = *shmptr;
 
     FILE *fp;
     char filename[250];
@@ -384,8 +398,9 @@ void *bfs_mainthread(void *arg)
             int node = i + 1;
             printf("[Secondary Server] BFS Thread: Processing node %d\n", node);
             dtt->visited[i] = 1;
-
-            // dtt->bfs_result[dtt->bfs_result_index++] = node;
+            struct current_vertex_data *cv_data= malloc(sizeof(struct current_vertex_data));
+            cv_data->cv=i+1;
+            dtt->cvdata= *cv_data;
             pthread_create(&subthread_id[i], NULL, bfs_subthread, (void *)dtt);
             
         }
