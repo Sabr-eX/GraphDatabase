@@ -273,8 +273,7 @@ void *bfs_subthread(void *arg)
 
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
-        {
+            {
             // Process the current node
             
             int node = i + 1; //make changes here?
@@ -367,8 +366,8 @@ void *bfs_mainthread(void *arg)
 
     // A few checks
     dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
-    dtt->visited[dtt->current_vertex] = 1;
-    int startingNode = dtt->current_vertex + 1;
+    dtt->visited[dtt->cvdata.cv] = 1;
+    int startingNode = dtt->cvdata.cv + 1;
 
     printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] BFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
@@ -392,7 +391,7 @@ void *bfs_mainthread(void *arg)
     pthread_mutex_unlock(&dtt->mutexLock); 
     for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
+        if (dtt->adjacency_matrix[dtt->cvdata.cv][i] == 1 && dtt->visited[i] == 0)
         {
             // Process the current node
             int node = i + 1;
