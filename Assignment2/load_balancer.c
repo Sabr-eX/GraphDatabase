@@ -135,7 +135,7 @@ int main()
             if (msg.data.operation == 5)
             {
                 cleanup(msg_queue_id);
-                exit(EXIT_SUCCESS);
+                //exit(EXIT_SUCCESS);
             }
             else if (msg.data.operation == 1 || msg.data.operation == 2)
             {
