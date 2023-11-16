@@ -28,19 +28,11 @@
 #define SECONDARY_SERVER_CHANNEL_2 4003
 #define MAX_THREADS 200
 #define MAX_VERTICES 100
-
-// global variables
-int adjacencyMatrix[MAX_VERTICES][MAX_VERTICES];
-int visited[MAX_VERTICES];
-int number_of_nodes;
-int starting_vertex;
-
-// Incorporate multithreading while traversing each evel
+#define MAX_QUEUE_SIZE 100
 
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
  */
-
 struct data
 {
     long seq_num;
@@ -51,7 +43,6 @@ struct data
 /**
  * The struct msg_buffer is used for message passing through message queues. It contains a message type and the struct data structure to carry the message data.
  */
-
 struct msg_buffer
 {
     long msg_type;
@@ -59,58 +50,38 @@ struct msg_buffer
 };
 
 /**
- * Used to pass data to threads for BFS and dfs processing. It includes a message queue ID and a message buffer.
+ * Used to pass data to threads for BFS and dfs processing.
+ * It includes a message queue ID and a message buffer.
+ * Starting vertex is the vertex from which the BFS or DFS starts.
+ * Storage pointer is used to store the SHM pointer address.
+ * Number of nodes is the number of nodes in the graph.
+ * Adjacency matrix is the adjacency matrix of the graph
+ * Visited is an array to keep track of visited nodes.
  */
 struct data_to_thread
 {
     int msg_queue_id;
     struct msg_buffer msg;
-    int starting_vertex;
-    int *storage_pointer;
+    int current_vertex;
+    int index;
+    int number_of_nodes;
+    int **adjacency_matrix;
+    int *visited;
+    int bfs_result[MAX_VERTICES];
+    int bfs_result_index;
 };
 
-/**
- * Has structure of a particular node during BFS Traversal
- */
-struct BFSNode
-{
-    int level;
-    int vertex;
-};
+// Code for queue
 
-/**
- * Stores result of the BFS
- */
-struct BFSResult
-{
-    int vertices[MAX_VERTICES];
-    int num_vertices;
-};
-
-/**
- * Standard queue DS
- */
+// Queue structure
 struct Queue
 {
-    int node_size[MAX_VERTICES];
-    int front, rear;
+    int items[MAX_QUEUE_SIZE];
+    int front;
+    int rear;
 };
 
-/**
- * We use this structure to pass data to individual threads. It contains a struct BFSNode for the node being processed, a struct BFSResult to store results, and a struct data_to_thread to pass message data.
- */
-
-struct thread_data
-{
-    struct BFSNode node;
-    struct BFSResult result;
-    struct data_to_thread dtt;
-};
-
-// Array of thread ids for BFS
-pthread_t thread_ids[MAX_THREADS];
-
-// Create and Initialize queue
+// Function to create an empty queue
 struct Queue *createQueue()
 {
     struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
@@ -119,171 +90,129 @@ struct Queue *createQueue()
     return queue;
 }
 
+// Function to check if the queue is empty
 int isEmpty(struct Queue *queue)
 {
-    return (queue->front == -1);
+    return queue->front == -1;
 }
 
+// Function to check if the queue is full
+int isFull(struct Queue *queue)
+{
+    return queue->rear == MAX_QUEUE_SIZE - 1;
+}
+
+// Function to enqueue an item to the queue
 void enqueue(struct Queue *queue, int value)
 {
-    if (queue->rear == MAX_VERTICES - 1)
+    if (isFull(queue))
     {
-        printf("Queue is full\n");
+        printf("Queue is full. Cannot enqueue %d.\n", value);
         return;
     }
-    if (queue->front == -1)
+
+    if (isEmpty(queue))
     {
         queue->front = 0;
     }
-    queue->node_size[queue->rear++] = value;
+
+    queue->rear++;
+    queue->items[queue->rear] = value;
+    printf("Enqueued %d to the queue.\n", value);
 }
 
+// Function to dequeue an item from the queue
 int dequeue(struct Queue *queue)
+{
+    int item;
+
+    if (isEmpty(queue))
+    {
+        printf("Queue is empty. Cannot dequeue.\n");
+        return -1;
+    }
+
+    item = queue->items[queue->front];
+    queue->front++;
+
+    if (queue->front > queue->rear)
+    {
+        // Reset the queue after all elements are dequeued
+        queue->front = queue->rear = -1;
+    }
+
+    printf("Dequeued %d from the queue.\n", item);
+    return item;
+}
+
+// Function to get the front item of the queue without removing it
+int front(struct Queue *queue)
 {
     if (isEmpty(queue))
     {
-        printf("Queue is empty\n");
-        exit(EXIT_FAILURE);
+        printf("Queue is empty.\n");
+        return -1;
     }
-    int value = queue->node_size[queue->front];
-    if (queue->front == queue->rear)
-    {
-        queue->front = -1;
-        queue->rear = -1;
-    }
-    else
-    {
-        queue->front++;
-    }
-    return value;
+
+    return queue->items[queue->front];
 }
 
-int readGraphFromFile(const char *filename)
+// Function to print the elements of the queue
+void display(struct Queue *queue)
 {
-    FILE *file = fopen(filename, "r");
-    if (!file)
+    int i;
+    if (isEmpty(queue))
     {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
+        printf("Queue is empty.\n");
+        return;
     }
 
-    // Read the number of nodes
-    if (fscanf(file, "%d", &number_of_nodes) != 1)
+    printf("Queue elements: ");
+    for (i = queue->front; i <= queue->rear; i++)
     {
-        perror("Error reading the number of nodes");
-        exit(EXIT_FAILURE);
+        printf("%d ", queue->items[i]);
     }
-
-    // Read the adjacency matrix
-    for (int i = 0; i < number_of_nodes; i++)
-    {
-        for (int j = 0; j < number_of_nodes; j++)
-        {
-            if (fscanf(file, "%d", &adjacencyMatrix[i][j]) != 1)
-            {
-                perror("Error reading the adjacency matrix");
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-
-    fclose(file);
-    return number_of_nodes;
+    printf("\n");
 }
 
-/**
- * @brief This function performs BFS for the input graph. The starting vertex is shared by the client using shared memory.
- *
- * @param arg
- * @return void*
- */
-
-// bfs_thread function
-void *bfs_thread(void *arg)
-{
-    struct thread_data *td = (struct thread_data *)arg;
-
-    int level = td->node.level;
-    int vertex = td->node.vertex;
-
-    // BFS for the specific level and vertex
-    struct Queue *queue = createQueue();
-    enqueue(queue, vertex);
-    td->result.vertices[td->result.num_vertices++] = vertex;
-
-    while (!isEmpty(queue))
-    {
-        int current_vertex = dequeue(queue);
-
-        // Process the current_vertex and add its neighbors to the queue
-        for (int i = 0; i < number_of_nodes; i++)
-        {
-            if (adjacencyMatrix[current_vertex][i] && !visited[i])
-            {
-                visited[i] = 1;
-                struct BFSNode next_node;
-                next_node.level = level + 1;
-                next_node.vertex = i;
-
-                // Enqueue the next node for processing
-                enqueue(queue, next_node.vertex);
-                td->result.vertices[td->result.num_vertices++] = next_node.vertex;
-            }
-        }
-    }
-
-    pthread_exit(NULL);
-}
-
-void *bfs(void *arg)
+void *dfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
-    // Connect to shared memory
-    // Only starting vertex stored in shared memory
-    key_t shm_key;
-    int shm_id;
+    int currentVertex = dtt->current_vertex + 1;
+    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", currentVertex);
 
-    // Generate key for the shared memory
-    while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
+    int flag = 0;
+    pthread_t dfs_thread_id[dtt->number_of_nodes];
+
+    for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        perror("[Secondary Server] Error while generating key for shared memory");
-        exit(EXIT_FAILURE);
+        if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
+        {
+            flag = 1;
+            dtt->visited[i] = 1;
+
+            dtt->current_vertex = i;
+
+            pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)dtt);
+            pthread_join(dfs_thread_id[i], NULL);
+
+            dtt->current_vertex = currentVertex - 1;
+        }
+        else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
+        {
+            int leaf = dtt->current_vertex + 1;
+            printf("[Secondary Server] DFS Sub Thread: New Leaf: %d\n", leaf);
+            printf("[Secondary Server] DFS Sub Thread: Storing %c at Index: %d\n", (char)(leaf + 48), dtt->index);
+
+            dtt->msg.data.graph_name[dtt->index] = (char)(leaf);
+            dtt->index = dtt->index + 1;
+            dtt->msg.data.graph_name[dtt->index] = '*';
+        }
     }
-    printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
-
-    // Create shared memory for starting vertex
-    if ((shm_id = shmget(shm_key, sizeof(int), IPC_CREAT | 0666)) == -1)
-    {
-        perror("[Secondary Server] Error creating shared memory");
-        exit(EXIT_FAILURE);
-    }
-
-    // Attach to the shared memory
-    int *shmptr = (int *)shmat(shm_id, NULL, 0);
-    if (shmptr == (void *)-1)
-    {
-        perror("[Secondary Server] Error in shmat \n");
-        exit(EXIT_FAILURE);
-    }
-
-    // Read number of nodes and adj matrix from file
-    readGraphFromFile(dtt->msg.data.graph_name);
-
-    // Write the starting vertex to shared memory
-    shmptr[0] = starting_vertex;
-
-    // Detach from shared memory
-    if (shmdt(shmptr) == -1)
-    {
-        perror("[Secondary Server] Could not detach from shared memory\n");
-        exit(EXIT_FAILURE);
-    }
-
-    // Notify the client that shared memory is ready
-    msgsnd(dtt->msg_queue_id, &dtt->msg, sizeof(dtt->msg.data), 0);
-
-    // Exit the BFS thread
+    free(dtt);
+    // Exit the DFS thread
+    printf("[Secondary Server] DFS Thread: Exiting DFS Thread\n");
     pthread_exit(NULL);
 }
 
@@ -295,17 +224,14 @@ void *bfs(void *arg)
  * @param arg
  * @return void*
  */
-void *dfs(void *arg)
+void *dfs_mainthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-
-    int number_of_nodes;
-    int starting_vertex;
 
     // Connect to shared memory
     key_t shm_key;
     int shm_id;
-    int *shmptr, *s;
+    int *shmptr;
 
     // Generate key for the shared memory
     // Here, we are using the seq_num as the key because
@@ -316,13 +242,13 @@ void *dfs(void *arg)
         exit(EXIT_FAILURE);
     }
     printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
+
     // Connect to the shared memory using the key
-    if ((shm_id = shmget(shm_key, sizeof(number_of_nodes), 0666)) < 0)
+    if ((shm_id = shmget(shm_key, sizeof(dtt->number_of_nodes), 0666)) < 0)
     {
         perror("[Secondary Server] Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
     }
-
     // Attach to the shared memory
     if ((shmptr = (int *)shmat(shm_id, NULL, 0)) == (void *)-1)
     {
@@ -330,9 +256,7 @@ void *dfs(void *arg)
         exit(EXIT_FAILURE);
     }
 
-    starting_vertex = *shmptr;
-    *shmptr = (int)'*';
-    s = shmptr++;
+    dtt->current_vertex = *shmptr;
 
     // Opening the Graph file to read the read the adjacency matrix
     FILE *fptr = fopen(dtt->msg.data.graph_name, "r");
@@ -341,69 +265,212 @@ void *dfs(void *arg)
         printf("[Seconday Server] Error opening file");
         exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d", &number_of_nodes);
+    fscanf(fptr, "%d", &(dtt->number_of_nodes));
 
-    int adjacencyMatrix[number_of_nodes][number_of_nodes];
-    int visited[number_of_nodes];
-
-    while (!feof(fptr))
+    dtt->adjacency_matrix = (int **)malloc(dtt->number_of_nodes * sizeof(int *));
+    for (int i = 0; i < dtt->number_of_nodes; i++)
     {
-        if (ferror(fptr))
-        {
-            printf("[Secondary Server] Error reading file");
-            exit(EXIT_FAILURE);
-        }
+        dtt->adjacency_matrix[i] = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+    }
 
-        for (int i = 0; i < number_of_nodes; i++)
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        for (int j = 0; j < dtt->number_of_nodes; j++)
         {
-            for (int j = 0; j < number_of_nodes; j++)
-            {
-                fscanf(fptr, "%d", &adjacencyMatrix[i][j]);
-            }
+            fscanf(fptr, "%d", &(dtt->adjacency_matrix[i][j]));
         }
     }
 
-    dtt->starting_vertex = starting_vertex;
-    printf("[Secondary Server] Starting vertex: %d\n", starting_vertex);
-    visited[starting_vertex] = 1;
+    dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+    dtt->visited[dtt->current_vertex] = 1;
+    int startingNode = dtt->current_vertex + 1;
 
-    dfsThread(&dtt);
+    printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
+    printf("[Secondary Server] DFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
+    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", startingNode);
 
+    pthread_t dfs_thread_id[dtt->number_of_nodes];
+
+    int flag = 0;
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
+        {
+            flag = 1;
+            dtt->visited[i] = 1;
+
+            dtt->current_vertex = i;
+
+            pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)dtt);
+            pthread_join(dfs_thread_id[i], NULL);
+
+            dtt->current_vertex = startingNode - 1;
+        }
+        else if ((i == (dtt->number_of_nodes - 1)) && (flag == 0))
+        {
+            int leaf = dtt->current_vertex + 1;
+            printf("[Secondary Server] DFS Main Thread: New Leaf: %d\n", leaf);
+            printf("[Secondary Server] DFS Main Thread: Storing %c at Index: %d\n", (char)(leaf + 48), dtt->index);
+
+            dtt->msg.data.graph_name[dtt->index] = (char)(leaf);
+            dtt->index = dtt->index + 1;
+            dtt->msg.data.graph_name[dtt->index] = '*';
+        }
+    }
+
+    dtt->msg.data.graph_name[++(dtt->index)] = '\0';
+
+    // Send the list of Leaf Nodes to the client via message queue
+    dtt->msg.msg_type = dtt->msg.data.seq_num;
+    dtt->msg.data.operation = 0;
+
+    printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+
+    if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
+    {
+        perror("[Secondary Server] Message could not be sent, please try again");
+        exit(EXIT_FAILURE);
+    }
+
+    // Detach from the shared memory
+    if (shmdt(shmptr) == -1)
+    {
+        perror("[Secondary Server] Could not detach from shared memory\n");
+        exit(EXIT_FAILURE);
+    }
+    free(dtt);
     // Exit the DFS thread
+    printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
+    printf("[Secondary Server] Successfully Completed Operation 3\n");
     pthread_exit(NULL);
 }
 
-void dfsThread(void *arg)
+void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-    int current_vertex = dtt->starting_vertex;
-    printf("[Secondary Server] Current vertex: %d\n", current_vertex);
-    int *s = dtt->storage_pointer;
-
-    int flag = 0;
-    pthread_t dfs_thread_id[number_of_nodes];
-    for (int i = 0; i < number_of_nodes; i++)
+    struct Queue *queue = createQueue();
+    enqueue(queue, dtt->current_vertex);
+    dtt->visited[dtt->current_vertex] = 1;
+    while (!isEmpty(queue))
     {
-        if ((adjacencyMatrix[dtt->starting_vertex][i] == 1) && (visited[i] == 0))
+        int currentVertex = dequeue(queue);
+        dtt->bfs_result[dtt->bfs_result_index++] = currentVertex; // Record the order of traversal
+        // printf("[Secondary Server] BFS Thread: Current vertex: %d\n", currentVertex);
+        for (int i = 0; i < dtt->number_of_nodes; i++)
         {
-            flag = 1;
-            visited[i] = 1;
-
-            dtt->starting_vertex = i;
-            dtt->storage_pointer = s;
-
-            pthread_create(&dfs_thread_id[i], NULL, dfsThread, (void *)&dtt);
-        }
-        else if ((i == number_of_nodes - 1) && (flag == 0))
-        {
-            *s = current_vertex;
-            s++;
-            *s = (int)' ';
-            s++;
+            if (dtt->adjacency_matrix[currentVertex][i] == 1 && dtt->visited[i] == 0)
+            {
+                enqueue(queue, i);
+                dtt->visited[i] = 1;
+            }
         }
     }
-    for (int i = 0; i < number_of_nodes; i++)
-        pthread_join(dfs_thread_id[i], NULL);
+    free(dtt);
+    pthread_exit(NULL);
+}
+
+void *bfs_mainthread(void *arg)
+{
+    struct data_to_thread *dtt = (struct data_to_thread *)arg;
+    // Connect to shared memory to retrieve the starting vertex
+    key_t shm_key;
+    int shm_id;
+    while ((shm_key = ftok(".", dtt->msg.data.seq_num)) == -1)
+    {
+        perror("[Secondary Server] Error while generating key for shared memory");
+        exit(EXIT_FAILURE);
+    }
+    printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
+    // Connect to the shared memory using the key
+    if ((shm_id = shmget(shm_key, sizeof(dtt->number_of_nodes), 0666)) == -1)
+    {
+        perror("[Secondary Server] Error occurred while connecting to shm\n");
+        exit(EXIT_FAILURE);
+    }
+    // Attach to the shared memory
+    int *shmptr = (int *)shmat(shm_id, NULL, 0);
+    if (shmptr == (void *)-1)
+    {
+        perror("[Secondary Server] Error in shmat \n");
+        exit(EXIT_FAILURE);
+    }
+
+    dtt->current_vertex = *shmptr;
+
+    FILE *fp;
+    char filename[250];
+    snprintf(filename, sizeof(filename), "%s", dtt->msg.data.graph_name);
+    fp = fopen(filename, "r");
+    if (fp == NULL)
+    {
+        perror("[Secondary Server] Error while opening the file");
+        exit(EXIT_FAILURE);
+    }
+    fscanf(fp, "%d", &(dtt->number_of_nodes));
+
+    dtt->adjacency_matrix = (int **)malloc(dtt->number_of_nodes * sizeof(int *));
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        dtt->adjacency_matrix[i] = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+    }
+    for (int i = 0; i < dtt->number_of_nodes; i++)
+    {
+        for (int j = 0; j < dtt->number_of_nodes; j++)
+        {
+            fscanf(fp, "%d ", &(dtt->adjacency_matrix[i][j]));
+        }
+        fclose(fp);
+        // A few checks
+        dtt->visited = (int *)malloc(dtt->number_of_nodes * sizeof(int));
+        dtt->visited[dtt->current_vertex] = 1;
+        int startingNode = dtt->current_vertex + 1;
+
+        printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
+        printf("[Secondary Server] BFS Request: Number of nodes: %d\n", dtt->number_of_nodes);
+        printf("[Secondary Server] BFS Request: Starting vertex: %d\n", startingNode);
+
+        pthread_t bfs_thread_id[dtt->number_of_nodes];
+        if (pthread_create(&bfs_thread_id[dtt->current_vertex], NULL, bfs_subthread, (void *)dtt) != 0)
+        {
+            perror("[Secondary Server] Error in BFS thread creation");
+            exit(EXIT_FAILURE);
+        }
+        // Join all BFS threads
+        for (int i = 0; i < dtt->number_of_nodes; i++)
+        {
+            pthread_join(bfs_thread_id[i], NULL);
+        }
+
+        dtt->msg.msg_type = dtt->msg.data.seq_num;
+        dtt->msg.data.operation = 0;
+
+        // Assuming bfs_result is an array to store the BFS result
+        for (int i = 0; i < dtt->bfs_result_index; i++)
+        {
+            dtt->msg.data.graph_name[i] = dtt->bfs_result[i];
+        }
+
+        printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+
+        if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
+        {
+            perror("[Secondary Server] Message could not be sent, please try again");
+            exit(EXIT_FAILURE);
+        }
+
+        // Detach from the shared memory
+        if (shmdt(shmptr) == -1)
+        {
+            perror("[Secondary Server] Could not detach from shared memory\n");
+            exit(EXIT_FAILURE);
+        }
+
+        free(dtt);
+        // Exit the BFS thread
+        printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
+        printf("[Secondary Server] Successfully Completed Operation 4\n");
+        pthread_exit(NULL);
+    }
 }
 
 int main()
@@ -451,7 +518,7 @@ int main()
     // Listen to the message queue for new requests from the clients
     while (1)
     {
-        struct data_to_thread dtt; // Declare dtt here
+        struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread)); // Declare dtt here
 
         if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), channel, 0) == -1)
         {
@@ -466,8 +533,8 @@ int main()
             {
                 // Operation code for DFS request
                 // Create a data_to_thread structure
-                dtt.msg_queue_id = msg_queue_id;
-                dtt.msg = msg;
+                dtt->msg_queue_id = msg_queue_id;
+                dtt->msg = msg;
 
                 // Determine the channel based on seq_num
                 int channel;
@@ -481,9 +548,10 @@ int main()
                 }
 
                 // Set the channel in the message structure
-                dtt.msg.msg_type = channel;
+                dtt->msg.msg_type = channel;
+                dtt->index = 0;
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs, (void *)&dtt) != 0)
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)dtt) != 0)
                 {
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
@@ -491,10 +559,10 @@ int main()
             }
             else if (msg.data.operation == 4)
             {
-                // Operation code for BFS request
+                // Operation code for DFS request
                 // Create a data_to_thread structure
-                dtt.msg_queue_id = msg_queue_id;
-                dtt.msg = msg;
+                dtt->msg_queue_id = msg_queue_id;
+                dtt->msg = msg;
 
                 // Determine the channel based on seq_num
                 int channel;
@@ -508,11 +576,12 @@ int main()
                 }
 
                 // Set the channel in the message structure
-                dtt.msg.msg_type = channel;
+                dtt->msg.msg_type = channel;
+                dtt->index = 0;
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs, (void *)&dtt) != 0)
+                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs_mainthread, (void *)dtt) != 0)
                 {
-                    perror("[Secondary Server] Error in BFS thread creation");
+                    perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
             }
@@ -532,6 +601,7 @@ int main()
                 exit(EXIT_SUCCESS);
             }
         }
+        free(dtt);
     }
 
     return 0;

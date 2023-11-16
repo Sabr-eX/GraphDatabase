@@ -10,6 +10,8 @@
  *
  */
 
+#define _GNU_SOURCE
+
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -167,6 +169,7 @@ void *writeToNewGraphFile(void *arg)
         perror("[Primary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
+    free(dtt);
     printf("[Primary Server] Successfully Completed Operation 1\n");
     pthread_exit(NULL);
 }
@@ -224,11 +227,12 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
+                //thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
             }
             else if (msg.data.operation == 5)
             {
-                // Cleanup
+               // Operation code for cleanup
                 for (int i = 0; i < 200; i++)
                 {
                     //printf("%d %lu\n",i,thread_ids[i]);
@@ -240,9 +244,9 @@ int main()
                 }
                 printf("[Primary Server] Terminating...\n");
                 exit(EXIT_SUCCESS);
+
             }
         }
     }
-
     return 0;
 }

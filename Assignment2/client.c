@@ -181,9 +181,9 @@ void operation_three(int msg_queue_id, int seq_num, struct msg_buffer message)
 
     int shmptr_index = 0;
     // Store data in shared memory using array traversals
-    shmptr[shmptr_index++] = starting_vertex;
+    shmptr[shmptr_index++] = (starting_vertex - 1);
 
-    // Change message channel to load balancer and send it to load balancer
+    // Change message channel to load balancer and sendoperation_three it to load balancer
     message.msg_type = LOAD_BALANCER_CHANNEL;
     message.data.operation = 3;
     message.data.seq_num = seq_num;
@@ -200,8 +200,15 @@ void operation_three(int msg_queue_id, int seq_num, struct msg_buffer message)
         {
             perror("[Client] Error while receiving message from secondary server");
         }
-        printf("[Client] Message received from the secondary Server: %ld -> %s using %ld\n", message.msg_type, message.data.graph_name, message.data.operation);
-        printf("[Client] Operation done successfully");
+        printf("[Client] Message received from the secondary Server: %ld\nThe list of Leaf Nodes while travelling from %d is: \n", message.msg_type, starting_vertex);
+        int i = 0;
+
+        while (message.data.graph_name[i] != '*')
+        {
+            printf("%d ", message.data.graph_name[i]);
+            i++;
+        }
+        printf("\n[Client] Operation done successfully\n");
     }
 
     // Detach shared memory and delete it
