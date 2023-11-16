@@ -59,11 +59,6 @@ struct msg_buffer
  * Visited is an array to keep track of visited nodes.
  */
 
-struct current_vertex_data
-{
-    int current_vertex;
-};
-
 struct data_to_thread
 {
     int *msg_queue_id;
@@ -74,14 +69,14 @@ struct data_to_thread
     int *visited;
     pthread_mutex_t *mutexLock;
     // note the change
-    struct current_vertex_data *cvdata;
+    int current_vertex;
 };
 
 void *dfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
-    int currentVertex = dtt->cvdata->current_vertex + 1;
+    int currentVertex = dtt->current_vertex + 1;
     printf("[Secondary Server] DFS Thread: Current vertex: %d\n", currentVertex);
 
     int flag = 0;
@@ -91,14 +86,15 @@ void *dfs_subthread(void *arg)
 
     for (int i = 0; i < *dtt->number_of_nodes; i++)
     {
-        if ((dtt->adjacency_matrix[dtt->cvdata->current_vertex][i] == 1) && (dtt->visited[i] == 0))
+        if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
             flag = 1;
             dtt->visited[i] = 1;
 
-            struct data_to_thread *newdtt = dtt;
-            newdtt->cvdata = malloc(sizeof(struct current_vertex_data));
-            newdtt->cvdata->current_vertex = i;
+            struct data_to_thread *newdtt = malloc(sizeof(struct data_to_thread));
+            *newdtt = *dtt;
+            newdtt->current_vertex = i;
+
             // struct current_vertex_data *new_cv_data= malloc(sizeof(struct current_vertex_data));
             // new_cv_data->current_vertex=i;
             // dtt->cvdata = new_cv_data;
@@ -108,7 +104,7 @@ void *dfs_subthread(void *arg)
         }
         else if ((i == (*dtt->number_of_nodes - 1)) && (flag == 0))
         {
-            int leaf = dtt->cvdata->current_vertex + 1;
+            int leaf = dtt->current_vertex + 1;
             printf("[Secondary Server] DFS Sub Thread: New Leaf: %d\n", leaf);
             printf("[Secondary Server] DFS Sub Thread: Storing %d at Index: %d\n", leaf, *dtt->index);
 
@@ -124,7 +120,7 @@ void *dfs_subthread(void *arg)
     {
         pthread_join(dfs_thread_id[threads[i]], NULL);
     }
-    free(dtt);
+
     // Exit the DFS thread
     printf("[Secondary Server] DFS Thread: Exiting DFS Thread\n");
     pthread_exit(NULL);
@@ -170,7 +166,7 @@ void *dfs_mainthread(void *arg)
         exit(EXIT_FAILURE);
     }
 
-    dtt->cvdata->current_vertex = *shmptr;
+    dtt->current_vertex = *shmptr;
 
     // Opening the Graph file to read the read the adjacency matrix
     FILE *fptr = fopen(dtt->msg->data.graph_name, "r");
@@ -179,10 +175,10 @@ void *dfs_mainthread(void *arg)
         printf("[Seconday Server] Error opening file");
         exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d", &(*dtt->number_of_nodes));
+    fscanf(fptr, "%d", dtt->number_of_nodes);
 
     dtt->adjacency_matrix = (int **)malloc((*dtt->number_of_nodes) * sizeof(int *));
-    for (int i = 0; i < *dtt->number_of_nodes; i++)
+    for (int i = 0; i < (*dtt->number_of_nodes); i++)
     {
         dtt->adjacency_matrix[i] = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
     }
@@ -196,9 +192,23 @@ void *dfs_mainthread(void *arg)
     }
     fclose(fptr);
 
+    // for (int i = 0; i < (*dtt->number_of_nodes); i++)
+    // {
+    //     for (int j = 0; j < (*dtt->number_of_nodes); j++)
+    //     {
+    //         printf("-----");
+    //         printf("%d ", dtt->adjacency_matrix[i][j]);
+    //         printf("------");
+    //     }
+    // }
+
     dtt->visited = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
-    dtt->visited[dtt->cvdata->current_vertex] = 1;
-    int startingNode = dtt->cvdata->current_vertex + 1;
+    for (int i = 0; i < *dtt->number_of_nodes; i++)
+    {
+        dtt->visited[i] = 0;
+    }
+    dtt->visited[dtt->current_vertex] = 1;
+    int startingNode = dtt->current_vertex + 1;
 
     printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] DFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -207,19 +217,19 @@ void *dfs_mainthread(void *arg)
     pthread_t dfs_thread_id[*dtt->number_of_nodes];
     int threads[*dtt->number_of_nodes];
     int threadIndex = 0;
-    int currentVertex = dtt->cvdata->current_vertex;
+    int currentVertex = dtt->current_vertex;
     int flag = 0;
     for (int i = 0; i < (*dtt->number_of_nodes); i++)
     {
         if ((dtt->adjacency_matrix[currentVertex][i] == 1) && (dtt->visited[i] == 0))
         {
-            printf("unvisited - %d", i);
             flag = 1;
             dtt->visited[i] = 1;
 
-            struct data_to_thread *newdtt = dtt;
-            newdtt->cvdata = malloc(sizeof(struct current_vertex_data));
-            newdtt->cvdata->current_vertex = i;
+            // struct data_to_thread *newdtt = dtt;
+            struct data_to_thread *newdtt = malloc(sizeof(struct data_to_thread));
+            *newdtt = *dtt;
+            newdtt->current_vertex = i;
             // struct current_vertex_data *new_cv_data= malloc(sizeof(struct current_vertex_data));
             // new_cv_data->current_vertex=i;
             // dtt->cvdata = new_cv_data;
@@ -229,7 +239,7 @@ void *dfs_mainthread(void *arg)
         }
         else if ((i == ((*dtt->number_of_nodes) - 1)) && (flag == 0))
         {
-            int leaf = dtt->cvdata->current_vertex + 1;
+            int leaf = dtt->current_vertex + 1;
             printf("[Secondary Server] DFS Main Thread: New Leaf: %d\n", leaf);
             printf("[Secondary Server] DFS Main Thread: Storing %d at Index: %d\n", leaf, *dtt->index);
 
@@ -277,7 +287,7 @@ void *dfs_mainthread(void *arg)
 // void *bfs_subthread(void *arg)
 // {
 //     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-//     int currentVertex = dtt->cvdata->current_vertex + 1;
+//     int currentVertex = dtt->current_vertex + 1;
 //     printf("[Secondary Server] BFS Sub Thread: Current vertex: %d\n", currentVertex);
 //     //Barrier intialization
 //     if (pthread_barrier_init(&dtt->bfs_barrier, NULL, *dtt->number_of_nodes) != 0)
@@ -357,7 +367,7 @@ void *dfs_mainthread(void *arg)
 //         exit(EXIT_FAILURE);
 //     }
 
-//     dtt->cvdata->current_vertex = *shmptr;
+//     dtt->current_vertex = *shmptr;
 
 //     FILE *fp;
 //     char filename[250];
@@ -386,8 +396,8 @@ void *dfs_mainthread(void *arg)
 
 //     // A few checks
 //     dtt->visited = (int *)malloc(*dtt->number_of_nodes * sizeof(int));
-//     dtt->visited[dtt->cvdata->current_vertex] = 1;
-//     int startingNode = dtt->cvdata->current_vertex + 1;
+//     dtt->visited[dtt->current_vertex] = 1;
+//     int startingNode = dtt->current_vertex + 1;
 
 //     printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
 //     printf("[Secondary Server] BFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -411,7 +421,7 @@ void *dfs_mainthread(void *arg)
 //     pthread_mutex_unlock(dtt->mutexLock);
 //     for (int i = 0; i < *dtt->number_of_nodes; i++)
 //     {
-//         if (dtt->adjacency_matrix[dtt->cvdata->current_vertex][i] == 1 && dtt->visited[i] == 0)
+//         if (dtt->adjacency_matrix[dtt->current_vertex][i] == 1 && dtt->visited[i] == 0)
 //         {
 //             // Process the current node
 //             int node = i + 1;
@@ -533,7 +543,6 @@ int main()
                 dtt->index = malloc(sizeof(int));
                 dtt->number_of_nodes = malloc(sizeof(int));
                 dtt->mutexLock = malloc(sizeof(pthread_mutex_t));
-                dtt->cvdata = malloc(sizeof(struct current_vertex_data));
 
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;
