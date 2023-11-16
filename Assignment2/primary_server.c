@@ -169,6 +169,7 @@ void *writeToNewGraphFile(void *arg)
         perror("[Primary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
+    free(dtt);
     printf("[Primary Server] Successfully Completed Operation 1\n");
     pthread_exit(NULL);
 }
@@ -247,6 +248,5 @@ int main()
             }
         }
     }
-
     return 0;
 }

@@ -210,7 +210,7 @@ void *dfs_subthread(void *arg)
             dtt->msg.data.graph_name[dtt->index] = '*';
         }
     }
-
+    free(dtt);
     // Exit the DFS thread
     printf("[Secondary Server] DFS Thread: Exiting DFS Thread\n");
     pthread_exit(NULL);
@@ -338,7 +338,7 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
-
+    free(dtt);
     // Exit the DFS thread
     printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
     printf("[Secondary Server] Successfully Completed Operation 3\n");
@@ -365,6 +365,7 @@ void *bfs_subthread(void *arg)
             }
         }
     }
+    free(dtt);
     pthread_exit(NULL);
 }
 
@@ -464,6 +465,7 @@ void *bfs_mainthread(void *arg)
             exit(EXIT_FAILURE);
         }
 
+        free(dtt);
         // Exit the BFS thread
         printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
         printf("[Secondary Server] Successfully Completed Operation 4\n");
@@ -599,6 +601,7 @@ int main()
                 exit(EXIT_SUCCESS);
             }
         }
+        free(dtt);
     }
 
     return 0;
