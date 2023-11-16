@@ -94,7 +94,7 @@ void *dfs_subthread(void *arg)
             struct data_to_thread *newdtt = malloc(sizeof(struct data_to_thread));
             *newdtt = *dtt;
             newdtt->current_vertex = i;
-          
+
             pthread_create(&dfs_thread_id[i], NULL, dfs_subthread, (void *)newdtt);
             threads[threadIndex++] = i;
         }
@@ -111,7 +111,7 @@ void *dfs_subthread(void *arg)
             pthread_mutex_unlock(dtt->mutexLock);
         }
     }
-    
+
     // Join all the subthreads
     for (int i = 0; i < threadIndex; i++)
     {
@@ -162,7 +162,7 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] Error in shmat \n");
         exit(EXIT_FAILURE);
     }
-    
+
     // Take input of vertex from shared memory
     dtt->current_vertex = *shmptr;
 
@@ -174,7 +174,7 @@ void *dfs_mainthread(void *arg)
         exit(EXIT_FAILURE);
     }
     fscanf(fptr, "%d", dtt->number_of_nodes);
-    
+
     // Allocate space for adjacency matrix
     dtt->adjacency_matrix = (int **)malloc((*dtt->number_of_nodes) * sizeof(int *));
     for (int i = 0; i < (*dtt->number_of_nodes); i++)
@@ -189,7 +189,7 @@ void *dfs_mainthread(void *arg)
         }
     }
     fclose(fptr);
-    
+
     // Allocate space for visited array
     dtt->visited = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
     for (int i = 0; i < *dtt->number_of_nodes; i++)
@@ -198,13 +198,12 @@ void *dfs_mainthread(void *arg)
     }
     dtt->visited[dtt->current_vertex] = 1;
     int startingNode = dtt->current_vertex + 1;
-    
-  
+
     // Debug logs
     printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] DFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
     printf("[Secondary Server] DFS Request: Starting vertex: %d\n", startingNode);
-    
+
     // All the subthreads
     pthread_t dfs_thread_id[*dtt->number_of_nodes];
     int threads[*dtt->number_of_nodes];
@@ -239,7 +238,7 @@ void *dfs_mainthread(void *arg)
             pthread_mutex_unlock(dtt->mutexLock);
         }
     }
-     
+
     // Join all subthreads
     for (int i = 0; i < threadIndex; i++)
     {
@@ -252,7 +251,7 @@ void *dfs_mainthread(void *arg)
     dtt->msg->msg_type = dtt->msg->data.seq_num;
     dtt->msg->data.operation = 0;
 
-    printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+    printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg->msg_type, *dtt->msg_queue_id);
 
     if (msgsnd(*dtt->msg_queue_id, dtt->msg, sizeof(struct data), 0) == -1)
     {
