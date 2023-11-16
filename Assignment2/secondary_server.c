@@ -591,7 +591,7 @@ int main()
                     //printf("%d %lu\n",i,thread_ids[i]);
                     if (thread_ids[i] != 0){
                         if(pthread_join(thread_ids[i], NULL) != 0){
-                            perror("[Primary Server] Error joining thread");
+                            perror("[Secondary Server] Error joining thread");
                         }
                     }
                 }

@@ -226,18 +226,12 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
-                thread_exists[msg.data.seq_num] = 1;
+                //thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
             }
             else if (msg.data.operation == 5)
             {
-                // for(int i=0;i<200;i++){
-                //     if (thread_ids[i])
-                //         printf("%d: %lu\n", i, thread_ids[i]);
-                //     else
-                //         printf("%d: NULL\n", i);
-                // }
-                // Cleanup
+               // Operation code for cleanup
                 for (int i = 0; i < 200; i++)
                 {
                     //printf("%d %lu\n",i,thread_ids[i]);
@@ -247,10 +241,9 @@ int main()
                         }
                     }
                 }
-                // sleep(5);
                 printf("[Primary Server] Terminating...\n");
-                
                 exit(EXIT_SUCCESS);
+
             }
         }
     }
