@@ -10,6 +10,8 @@
  *
  */
 
+#define _GNU_SOURCE
+
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -224,6 +226,7 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
+                thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
             }
             else if (msg.data.operation == 5)
