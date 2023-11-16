@@ -10,6 +10,8 @@
  *
  */
 
+#define _GNU_SOURCE
+
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -205,6 +207,8 @@ int main()
 
     // Store the thread_ids
     pthread_t thread_ids[MAX_THREADS];
+    int thread_exists[MAX_THREADS];
+    memset(thread_exists, 0, sizeof(thread_exists));
 
     // Listen to the message queue for new requests from the clients
     while (1)
@@ -224,6 +228,7 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
+                thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
             }
             else if (msg.data.operation == 5)
@@ -231,8 +236,15 @@ int main()
                 // Cleanup
                 for (int i = 0; i < 200; i++)
                 {
-                    pthread_join(thread_ids[i], NULL);
+                    printf("[Primary Server] Joining thread %d with thread id %ld\n", i, thread_ids[i]);
+
+                    if (thread_exists[msg.data.seq_num] == 1)
+                    {
+                        pthread_join(thread_ids[i], NULL);
+                        printf("[Primary Server] Thread %d with thread id %ld joined\n", i, thread_ids[i]);
+                    }
                 }
+                exit(EXIT_SUCCESS);
             }
         }
     }
