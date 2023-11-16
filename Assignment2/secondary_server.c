@@ -324,7 +324,7 @@ void *dfs_mainthread(void *arg)
     dtt->msg.msg_type = dtt->msg.data.seq_num;
     dtt->msg.data.operation = 0;
 
-    printf("[Primary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+    printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
 
     if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
     {
@@ -441,38 +441,35 @@ void *bfs_mainthread(void *arg)
         }
 
         dtt->msg.msg_type = dtt->msg.data.seq_num;
-    	dtt->msg.data.operation = 0;
+        dtt->msg.data.operation = 0;
 
-    	// Assuming bfs_result is an array to store the BFS result
-   	for (int i = 0; i < dtt->bfs_result_index; i++)
-    	{
-        	dtt->msg.data.graph_name[i] = dtt->bfs_result[i];
-    	}
+        // Assuming bfs_result is an array to store the BFS result
+        for (int i = 0; i < dtt->bfs_result_index; i++)
+        {
+            dtt->msg.data.graph_name[i] = dtt->bfs_result[i];
+        }
 
-    	printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
+        printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg.msg_type, dtt->msg_queue_id);
 
-    	if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
-    	{	
-        	perror("[Secondary Server] Message could not be sent, please try again");
-        	exit(EXIT_FAILURE);
-    	}
+        if (msgsnd(dtt->msg_queue_id, &(dtt->msg), sizeof(dtt->msg.data), 0) == -1)
+        {
+            perror("[Secondary Server] Message could not be sent, please try again");
+            exit(EXIT_FAILURE);
+        }
 
-    	// Detach from the shared memory
-    	if (shmdt(shmptr) == -1)
-    	{
-        	perror("[Secondary Server] Could not detach from shared memory\n");
-        	exit(EXIT_FAILURE);
-    	}
+        // Detach from the shared memory
+        if (shmdt(shmptr) == -1)
+        {
+            perror("[Secondary Server] Could not detach from shared memory\n");
+            exit(EXIT_FAILURE);
+        }
 
-    	// Exit the BFS thread
-    	printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
-    	printf("[Secondary Server] Successfully Completed Operation 4\n");
-    	pthread_exit(NULL);
+        // Exit the BFS thread
+        printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
+        printf("[Secondary Server] Successfully Completed Operation 4\n");
+        pthread_exit(NULL);
+    }
 }
-
-
-}
-
 
 int main()
 {
@@ -560,7 +557,7 @@ int main()
             }
             else if (msg.data.operation == 4)
             {
-            	// Operation code for DFS request
+                // Operation code for DFS request
                 // Create a data_to_thread structure
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
@@ -585,7 +582,6 @@ int main()
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-            
             }
             else if (msg.data.operation == 5)
             {
