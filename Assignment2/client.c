@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <semaphore.h>
+#include <errno.h>
 
 #define MESSAGE_LENGTH 100
 #define LOAD_BALANCER_CHANNEL 4000
@@ -198,6 +199,10 @@ void operation_three(int msg_queue_id, int seq_num, struct msg_buffer message)
     {
         while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
         {
+            if (errno == EIDRM) {
+                printf("[Client] Message queue removed. Exiting...");
+                exit(EXIT_FAILURE);
+            }
             perror("[Client] Error while receiving message from secondary server");
         }
         printf("[Client] Message received from the secondary Server: %ld\nThe list of Leaf Nodes while travelling from %d is: \n", message.msg_type, starting_vertex);
@@ -281,8 +286,12 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
     }
     else
     {
-        while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
+       while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
         {
+            if (errno == EIDRM) {
+                printf("[Client] Message queue removed. Exiting...");
+                exit(EXIT_FAILURE);
+            }
             perror("[Client] Error while receiving message from secondary server");
         }
         printf("[Client] Message received from the secondary Server: %ld -> %s using %ld\n", message.msg_type, message.data.graph_name, message.data.operation);

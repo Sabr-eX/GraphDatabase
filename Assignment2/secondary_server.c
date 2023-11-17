@@ -346,7 +346,7 @@ void *dfs_mainthread(void *arg)
     }
     dtt->visited[dtt->current_vertex] = 1;
     int startingNode = dtt->current_vertex + 1;
-
+    
     // Debug logs
     printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] DFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -605,7 +605,7 @@ int main()
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids thread
-    pthread_t thread_ids[200] = {0};
+    pthread_t thread_ids[200] ;
 
     int channel;
     printf("[Secondary Server] Enter the channel number: ");
@@ -620,7 +620,7 @@ int main()
     }
 
     printf("[Secondary Server] Using Channel: %d\n", channel);
-
+    int thread_counter = 0;
     // Listen to the message queue for new requests from the clients
     while (1)
     {
@@ -658,7 +658,7 @@ int main()
                 {
                     channel = SECONDARY_SERVER_CHANNEL_2;
                 }
-
+                
                 // Set the channel in the message structure
                 dtt->msg->msg_type = channel;
                 *dtt->index = 0;
@@ -668,6 +668,7 @@ int main()
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
+                thread_counter++;
             }
             else if (msg.data.operation == 4)
             {
@@ -702,13 +703,14 @@ int main()
                     perror("[Secondary Server] Error in BFS thread creation");
                     exit(EXIT_FAILURE);
                 }
+                thread_counter++;
             }
             else if (msg.data.operation == 5)
             {
                 // Operation code for cleanup
-                for (int i = 0; i < MAX_THREADS; i++)
+                for (int i = 1; i <= thread_counter; i++)
                 {
-                    printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)

@@ -184,6 +184,7 @@ int main()
     key_t key;
     int msg_queue_id;
     struct msg_buffer msg;
+    int thread_counter = 0;
 
     // Link it with a key which lets you use the same key to communicate from both sides
     if ((key = ftok(".", 'B')) == -1)
@@ -201,7 +202,7 @@ int main()
     printf("[Primary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids
-    pthread_t thread_ids[MAX_THREADS] = {0};
+    pthread_t thread_ids[MAX_THREADS] ;
 
     // Listen to the message queue for new requests from the clients
     while (1)
@@ -223,13 +224,14 @@ int main()
                 dtt->msg = msg;
                 // thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
+                thread_counter++;
             }
             else if (msg.data.operation == 5)
             {
-                // Operation code for cleanup
-                for (int i = 0; i < 200; i++)
+               // Operation code for cleanup
+                for (int i = 1; i <= thread_counter; i++)
                 {
-                    // printf("%d %lu\n",i,thread_ids[i]);
+                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)
