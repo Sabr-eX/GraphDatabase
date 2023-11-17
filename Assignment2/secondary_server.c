@@ -306,7 +306,7 @@ void *dfs_mainthread(void *arg)
     FILE *fptr = fopen(filename, "r");
     if (fptr == NULL)
     {
-        printf("[Secondary Server] Error opening file");
+        printf("[Secondary Server] Error opening file\n");
         exit(EXIT_FAILURE);
     }
     else
@@ -413,7 +413,7 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
-    printf("[Secondary Server] DFS Main Thread: Freeing dtt");
+    printf("[Secondary Server] DFS Main Thread: Freeing dtt\n");
     free(dtt);
     // Exit the DFS thread
     printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
