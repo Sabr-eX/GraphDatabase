@@ -75,6 +75,7 @@ void cleanup(int msg_queue_id)
 
     // Sleep for a while to allow servers to perform cleanup
     sleep(5);
+    
 
     // Destroy the message queue
     if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
@@ -136,7 +137,7 @@ int main()
             if (msg.data.operation == 5)
             {
                 cleanup(msg_queue_id);
-                exit(EXIT_SUCCESS);
+                
             }
             else if (msg.data.operation == 1 || msg.data.operation == 2)
             {

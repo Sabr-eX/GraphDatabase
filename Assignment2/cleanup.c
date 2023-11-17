@@ -69,7 +69,7 @@ void clean(int msg_queue_id, struct msg_buffer msg_buf)
             }
             else
             {
-                printf("[Cleanup] Message sent to Main Server\n");
+                printf("[Cleanup] Message sent to Load Balancer\n");
                 exit(EXIT_SUCCESS);
             }
         }

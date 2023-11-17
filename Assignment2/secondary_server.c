@@ -265,8 +265,10 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
+
     printf("[Secondary Server] DFS Main Thread: Freeing dtt");
     free(dtt);
+  
     // Exit the DFS thread
     printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
     printf("[Secondary Server] Successfully Completed Operation 3\n");
@@ -299,7 +301,7 @@ int main()
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids thread
-    pthread_t thread_ids[200];
+    pthread_t thread_ids[200] = {0};
 
     int channel;
     printf("[Secondary Server] Enter the channel number: ");
@@ -369,12 +371,21 @@ int main()
             else if (msg.data.operation == 5)
             {
                 // Operation code for cleanup
-                for (int i = 0; i < 200; i++)
+                for (int i = 0; i < MAX_THREADS; i++)
                 {
-                    pthread_join(thread_ids[i], NULL);
+                    printf("Attempting to Clean: %d %lu\n",i,thread_ids[i]);
+                    if (thread_ids[i] != 0){
+                        if(pthread_join(thread_ids[i], NULL) != 0){
+                            perror("[Secondary Server] Error joining thread");
+                        }
+                    }
                 }
+              
+                printf("[Secondary Server] Terminating...\n");
+                exit(EXIT_SUCCESS);
             }
         }
+
     }
 
     return 0;

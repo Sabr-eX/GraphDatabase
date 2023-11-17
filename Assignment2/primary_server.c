@@ -206,9 +206,7 @@ int main()
     printf("[Primary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids
-    pthread_t thread_ids[MAX_THREADS];
-    int thread_exists[MAX_THREADS];
-    memset(thread_exists, 0, sizeof(thread_exists));
+    pthread_t thread_ids[MAX_THREADS] = {0};
 
     // Listen to the message queue for new requests from the clients
     while (1)
@@ -228,26 +226,26 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
-                thread_exists[msg.data.seq_num] = 1;
+                //thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
             }
             else if (msg.data.operation == 5)
             {
-                // Cleanup
+               // Operation code for cleanup
                 for (int i = 0; i < 200; i++)
                 {
-                    printf("[Primary Server] Joining thread %d with thread id %ld\n", i, thread_ids[i]);
-
-                    if (thread_exists[msg.data.seq_num] == 1)
-                    {
-                        pthread_join(thread_ids[i], NULL);
-                        printf("[Primary Server] Thread %d with thread id %ld joined\n", i, thread_ids[i]);
+                    //printf("%d %lu\n",i,thread_ids[i]);
+                    if (thread_ids[i] != 0){
+                        if(pthread_join(thread_ids[i], NULL) != 0){
+                            perror("[Primary Server] Error joining thread");
+                        }
                     }
                 }
+                printf("[Primary Server] Terminating...\n");
                 exit(EXIT_SUCCESS);
+
             }
         }
     }
-
     return 0;
 }
