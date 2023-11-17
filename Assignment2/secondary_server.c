@@ -30,6 +30,8 @@
 #define MAX_VERTICES 100
 #define MAX_QUEUE_SIZE 100
 
+int current_readers = 0;
+
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
  */
@@ -280,29 +282,61 @@ void *dfs_mainthread(void *arg)
     // Take input of vertex from shared memory
     dtt->current_vertex = *shmptr;
 
-    // Opening the Graph file to read the read the adjacency matrix
-    FILE *fptr = fopen(dtt->msg->data.graph_name, "r");
+    // Choose an appropriate size for your filename
+    char filename[250];
+    // Make sure the filename is null-terminated, and copy it to the 'filename' array
+    snprintf(filename, sizeof(filename), "%s", dtt->msg->data.graph_name);
+    // SEMAPHORE PART
+    char sema_name_rw[256];
+    snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
+    char sema_name_read[256];
+    snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+    // If O_CREAT is specified, and a semaphore with the given name already exists,
+    // then mode and value are ignored.
+    sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
+    sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+
+    printf("[Secondary Server] Waiting for the semaphore to be available\n");
+    sem_wait(read_sem);
+    current_readers++;
+    if (current_readers == 1)
+        sem_wait(rw_sem);
+    sem_post(read_sem);
+
+    FILE *fptr = fopen(filename, "r");
     if (fptr == NULL)
     {
-        printf("[Seconday Server] Error opening file");
+        printf("[Secondary Server] Error opening file");
         exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d", dtt->number_of_nodes);
+    else
+    {
+        printf("[Secondary Server] Successfully opened the file %s\n", filename);
+        fscanf(fptr, "%d", dtt->number_of_nodes);
 
-    // Allocate space for adjacency matrix
-    dtt->adjacency_matrix = (int **)malloc((*dtt->number_of_nodes) * sizeof(int *));
-    for (int i = 0; i < (*dtt->number_of_nodes); i++)
-    {
-        dtt->adjacency_matrix[i] = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
-    }
-    for (int i = 0; i < (*dtt->number_of_nodes); i++)
-    {
-        for (int j = 0; j < (*dtt->number_of_nodes); j++)
+        // Allocate space for adjacency matrix
+        dtt->adjacency_matrix = (int **)malloc((*dtt->number_of_nodes) * sizeof(int *));
+        for (int i = 0; i < (*dtt->number_of_nodes); i++)
         {
-            fscanf(fptr, "%d", &(dtt->adjacency_matrix[i][j]));
+            dtt->adjacency_matrix[i] = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
         }
+        for (int i = 0; i < (*dtt->number_of_nodes); i++)
+        {
+            for (int j = 0; j < (*dtt->number_of_nodes); j++)
+            {
+                fscanf(fptr, "%d", &(dtt->adjacency_matrix[i][j]));
+            }
+        }
+        fclose(fptr);
     }
-    fclose(fptr);
+
+    printf("[Secondary Server] Releasing the semaphore\n");
+
+    sem_wait(read_sem);
+    current_readers--;
+    if (current_readers == 0)
+        sem_post(rw_sem);
+    sem_post(read_sem);
 
     // Allocate space for visited array
     dtt->visited = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
