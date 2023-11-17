@@ -49,6 +49,14 @@ struct msg_buffer
     struct data data;
 };
 
+// Queue structure
+struct Queue
+{
+    int items[MAX_QUEUE_SIZE];
+    int front;
+    int rear;
+};
+
 /**
  * Used to pass data to threads for BFS and dfs processing.
  * It includes a message queue ID and a message buffer.
@@ -59,17 +67,20 @@ struct msg_buffer
  * Mutexlock to keep track of when we are editing the output
  * Current Vertex to keep track of current vertex
  */
-
-// Code for queue
-
-// Queue structure
-struct Queue
+struct data_to_thread
 {
-    int items[MAX_QUEUE_SIZE];
-    int front;
-    int rear;
+    int *msg_queue_id;
+    struct msg_buffer *msg;
+    int *index;
+    int *number_of_nodes;
+    int **adjacency_matrix;
+    int *visited;
+    pthread_mutex_t *mutexLock;
+    int current_vertex;
+    struct Queue *bfs_queue;
 };
 
+// Code for queue
 // Function to create an empty queue
 struct Queue *createQueue()
 {
@@ -173,18 +184,6 @@ void display(struct Queue *queue)
     }
     printf("\n");
 }
-
-struct data_to_thread
-{
-    int *msg_queue_id;
-    struct msg_buffer *msg;
-    int *index;
-    int *number_of_nodes;
-    int **adjacency_matrix;
-    int *visited;
-    pthread_mutex_t *mutexLock;
-    int current_vertex;
-};
 
 void *dfs_subthread(void *arg)
 {
@@ -393,11 +392,8 @@ void *bfs_subthread(void *arg)
     // Lock
     pthread_mutex_lock(dtt->mutexLock);
     dtt->msg->data.graph_name[*dtt->index] = dtt->current_vertex;
-    dtt->index++;
+    *dtt->index = *dtt->index + 1;
     dtt->msg->data.graph_name[*dtt->index] = '*';
-    // Create Queue
-    struct Queue *bfs_queue = createQueue();
-
     // Unlock
     pthread_mutex_unlock(dtt->mutexLock);
     dtt->visited[dtt->current_vertex] = 1;
@@ -407,7 +403,7 @@ void *bfs_subthread(void *arg)
     {
         if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
-            enqueue(bfs_queue, i);
+            enqueue((dtt->bfs_queue), i);
         }
     }
 
@@ -419,7 +415,7 @@ void *bfs_subthread(void *arg)
 void *bfs_mainthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-    struct Queue *bfs_queue = createQueue();
+
     // Connect to shared memory
     key_t shm_key;
     int shm_id;
@@ -478,7 +474,7 @@ void *bfs_mainthread(void *arg)
     }
 
     int starting_vertex = dtt->current_vertex + 1;
-    dtt->visited[starting_vertex] = 1;
+    dtt->visited[dtt->current_vertex] = 1;
     // Debugging
     printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] BFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -486,34 +482,38 @@ void *bfs_mainthread(void *arg)
 
     // int currentVertex= dtt->current_vertex;
     // push starting vertex into queue
-    enqueue(bfs_queue, starting_vertex);
+    enqueue((dtt->bfs_queue), starting_vertex);
     // printf("Entry in queue is: %d", starting_vertex);
 
-    while (!isEmpty(bfs_queue))
+    while (!isEmpty((dtt->bfs_queue)))
     {
 
-        int queue_size = queueSize(bfs_queue);
+        int queue_size = queueSize((dtt->bfs_queue));
         printf("Queue size: %d\n", queue_size);
         int array[queue_size];
 
         // Copy entries into array, empty queue
         int entry = 0;
-        array[entry++] = dequeue(bfs_queue);
+        array[entry++] = dequeue((dtt->bfs_queue));
 
         pthread_t subthread_ids[queue_size];
+        int threads[queue_size];
+        int threadIndex = 0;
 
         for (int i = 0; i < queue_size; i++)
         {
             struct data_to_thread *newdtt = malloc(sizeof(struct data_to_thread));
             *newdtt = *dtt;
-            newdtt->current_vertex = i;
+            newdtt->current_vertex = array[i];
             pthread_create(&subthread_ids[i], NULL, bfs_subthread, (void *)dtt);
             printf("This loop is being entered\n");
+            threads[threadIndex++] = i;
         }
 
-        for (int i = 0; i < queue_size; i++)
+        // Join all the subthreads
+        for (int i = 0; i < threadIndex; i++)
         {
-            pthread_join(subthread_ids[i], NULL);
+            pthread_join(subthread_ids[threads[i]], NULL);
         }
     }
 
@@ -608,6 +608,7 @@ int main()
                 dtt->msg_queue_id = malloc(sizeof(int));
                 dtt->msg = malloc(sizeof(struct msg_buffer));
                 dtt->index = malloc(sizeof(int));
+                *dtt->index = 0;
                 dtt->number_of_nodes = malloc(sizeof(int));
                 dtt->mutexLock = malloc(sizeof(pthread_mutex_t));
 
@@ -627,7 +628,7 @@ int main()
 
                 // Set the channel in the message structure
                 dtt->msg->msg_type = channel;
-                *dtt->index = 0;
+
                 // Create a new thread to handle BFS
                 if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)dtt) != 0)
                 {
@@ -639,11 +640,13 @@ int main()
             {
                 // Operation code for DFS request
                 // Create a data_to_thread structure
-                dtt->msg_queue_id = malloc(sizeof(int));
-                dtt->msg = malloc(sizeof(struct msg_buffer));
-                dtt->index = malloc(sizeof(int));
-                dtt->number_of_nodes = malloc(sizeof(int));
-                dtt->mutexLock = malloc(sizeof(pthread_mutex_t));
+                dtt->msg_queue_id = (int *)malloc(sizeof(int));
+                dtt->msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
+                dtt->index = (int *)malloc(sizeof(int));
+                *dtt->index = 0;
+                dtt->number_of_nodes = (int *)malloc(sizeof(int));
+                dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+                dtt->bfs_queue = (struct Queue *)malloc(sizeof(struct Queue));
 
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;
@@ -661,7 +664,7 @@ int main()
 
                 // Set the channel in the message structure
                 dtt->msg->msg_type = channel;
-                *dtt->index = 0;
+
                 // Create a new thread to handle BFS
                 if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs_mainthread, (void *)dtt) != 0)
                 {
