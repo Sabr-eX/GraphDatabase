@@ -741,7 +741,7 @@ int main()
                 // Operation code for cleanup
                 for (int i = 1; i <= thread_counter; i++)
                 {
-                    // printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)
