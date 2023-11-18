@@ -671,17 +671,19 @@ int main()
             {
                 // Operation code for DFS request
                 // Create a data_to_thread structure
-                dtt->msg_queue_id = malloc(sizeof(int));
-                dtt->msg = malloc(sizeof(struct msg_buffer));
-                dtt->index = malloc(sizeof(int));
+                dtt->msg_queue_id = (int *)malloc(sizeof(int));
+                dtt->msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
+                dtt->index = (int *)malloc(sizeof(int));
                 *dtt->index = 0;
-                dtt->number_of_nodes = malloc(sizeof(int));
-                dtt->mutexLock = malloc(sizeof(pthread_mutex_t));
+
+                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
+                dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
                 {
                     perror("[Secondary Server] Error initializing mutexLock");
                     exit(EXIT_FAILURE);
                 }
+
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;
 
@@ -709,7 +711,7 @@ int main()
             }
             else if (msg.data.operation == 4)
             {
-                // Operation code for DFS request
+                // Operation code for BFS request
                 // Create a data_to_thread structure
                 dtt->msg_queue_id = (int *)malloc(sizeof(int));
                 dtt->msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
