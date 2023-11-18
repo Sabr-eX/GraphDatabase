@@ -237,9 +237,9 @@ int main()
                 for (int i = 0; i < threadIndex; i++)
                 {
                     // printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
-                    if (thread_ids[i] != 0)
+                    if (thread_ids[threads[i]] != 0)
                     {
-                        if (pthread_join(thread_ids[i], NULL) != 0)
+                        if (pthread_join(thread_ids[threads[i]], NULL) != 0)
                         {
                             perror("[Primary Server] Error joining thread");
                         }

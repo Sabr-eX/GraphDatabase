@@ -332,7 +332,7 @@ void *dfs_mainthread(void *arg)
         }
         fclose(fptr);
     }
-
+    sleep(3);
     printf("[Secondary Server] Releasing the semaphore\n");
     sem_wait(read_sem);
     sem_getvalue(&read_count, &current_readers);
@@ -508,7 +508,6 @@ void *bfs_mainthread(void *arg)
         exit(EXIT_FAILURE);
     }
     dtt->current_vertex = *shmptr;
-
     // Choose an appropriate size for your filename
     char filename[250];
     // Make sure the filename is null-terminated, and copy it to the 'filename' array
@@ -817,9 +816,9 @@ int main()
                 for (int i = 0; i < threadIndex; i++)
                 {
                     //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
-                    if (thread_ids[i] != 0)
+                    if (thread_ids[threads[i]] != 0)
                     {
-                        if (pthread_join(thread_ids[i], NULL) != 0)
+                        if (pthread_join(thread_ids[threads[i]], NULL) != 0)
                         {
                             perror("[Secondary Server] Error joining thread");
                         }
