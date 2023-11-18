@@ -677,7 +677,11 @@ int main()
                 *dtt->index = 0;
                 dtt->number_of_nodes = malloc(sizeof(int));
                 dtt->mutexLock = malloc(sizeof(pthread_mutex_t));
-
+                if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
+                {
+                    perror("[Secondary Server] Error initializing mutexLock");
+                    exit(EXIT_FAILURE);
+                }
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;
 
@@ -713,7 +717,17 @@ int main()
                 *dtt->index = 0;
                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+                if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
+                {
+                    perror("[Secondary Server] Error initializing mutexLock");
+                    exit(EXIT_FAILURE);
+                }
                 dtt->queueLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+                if (pthread_mutex_init(dtt->queueLock, NULL) != 0)
+                {
+                    perror("[Secondary Server] Error initializing queueLock");
+                    exit(EXIT_FAILURE);
+                }
                 dtt->bfs_queue = createQueue();
 
                 *dtt->msg_queue_id = msg_queue_id;
