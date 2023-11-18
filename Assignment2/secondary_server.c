@@ -409,6 +409,11 @@ void *dfs_mainthread(void *arg)
     }
     printf("[Secondary Server] DFS Main Thread: Freeing dtt\n");
     free(dtt);
+    // Destroy mutexLock
+    if (pthread_mutex_destroy(dtt->mutexLock) != 0)
+    {
+        printf("[Secondary Server] BFS Main Thread: Error destroying mutexLock");
+    }
     // Exit the DFS thread
     printf("[Secondary Server] DFS Main Thread: Exiting DFS Request\n");
     printf("[Secondary Server] Successfully Completed Operation 3\n");
@@ -605,6 +610,17 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] BFS Main Thread: Freeing dtt\n");
     free(dtt);
 
+    // Destroy mutexLock
+    if (pthread_mutex_destroy(dtt->mutexLock) != 0)
+    {
+        printf("[Secondary Server] BFS Main Thread: Error destroying mutexLock");
+    }
+    // Destroy queueLock
+    if (pthread_mutex_destroy(dtt->queueLock) != 0)
+    {
+        printf("[Secondary Server] BFS Main Thread: Error destroying queueLock");
+    }
+
     // Exit the BFS thread
     printf("[Secondary Server] BFS Main Thread: Exiting...\n");
     printf("[Secondary Server] Successfully Completed Operation 4\n");
@@ -676,7 +692,7 @@ int main()
                 dtt->index = (int *)malloc(sizeof(int));
                 *dtt->index = 0;
 
-                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
+                dtt->number_of_nodes = (int *)malloc(sizeof(int));
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
                 {
