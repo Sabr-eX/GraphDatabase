@@ -4,10 +4,13 @@
 
 ```c
 #define MESSAGE_LENGTH 100
-#define LOAD_BALANCER_CHANNEL 1
-#define PRIMARY_SERVER_CHANNEL 2
-#define SECONDARY_SERVER_CHANNEL_1 3
-#define SECONDARY_SERVER_CHANNEL_2 4
+#define LOAD_BALANCER_CHANNEL 4000
+#define PRIMARY_SERVER_CHANNEL 4001
+#define SECONDARY_SERVER_CHANNEL_1 4002
+#define SECONDARY_SERVER_CHANNEL_2 4003
+#define MAX_THREADS 200
+#define MAX_VERTICES 100
+#define MAX_QUEUE_SIZE 100
 
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
@@ -28,23 +31,42 @@ struct msg_buffer
     struct data data;
 };
 
+/*
+ * Implementation of Queue
+ */
+struct Queue
+{
+    int items[MAX_QUEUE_SIZE];
+    int front;
+    int rear;
+};
+
+
+
 /**
  * Used to pass data to threads for BFS and dfs processing.
  * It includes a message queue ID and a message buffer.
- * Starting vertex is the vertex from which the BFS or DFS starts.
- * Storage pointer is used to store the SHM pointer address.
+ * Index is the index at which the next vertex number should be entered into graph_name[]
  * Number of nodes is the number of nodes in the graph.
  * Adjacency matrix is the adjacency matrix of the graph
  * Visited is an array to keep track of visited nodes.
+ * Mutexlock to keep track of when we are editing the output i.e. graph_name[]
+ * QueueLock to keep track of when BFS threads are editing the queue
+ * Current Vertex to keep track of current vertex
+ * BFS Queue is the queue used in BFS
  */
 struct data_to_thread
 {
-    int msg_queue_id;
-    struct msg_buffer msg;
-    int current_vertex;
-    int number_of_nodes;
+    int *msg_queue_id;
+    struct msg_buffer *msg;
+    int *index;
+    int *number_of_nodes;
     int **adjacency_matrix;
     int *visited;
+    pthread_mutex_t *mutexLock;
+    pthread_mutex_t *queueLock;
+    int current_vertex;
+    struct Queue *bfs_queue;
 };
 ```
 
