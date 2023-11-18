@@ -199,7 +199,8 @@ void operation_three(int msg_queue_id, int seq_num, struct msg_buffer message)
     {
         while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
         {
-            if (errno == EIDRM) {
+            if (errno == EIDRM)
+            {
                 printf("[Client] Message queue removed. Exiting...");
                 exit(EXIT_FAILURE);
             }
@@ -286,9 +287,10 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
     }
     else
     {
-       while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
+        while (msgrcv(msg_queue_id, &message, sizeof(message.data), seq_num, 0) == -1)
         {
-            if (errno == EIDRM) {
+            if (errno == EIDRM)
+            {
                 printf("[Client] Message queue removed. Exiting...");
                 exit(EXIT_FAILURE);
             }
@@ -362,6 +364,10 @@ int main()
         printf("4. Perform BFS on an existing graph of the database\n");
         printf("5. Exit\n");
 
+        int seq_num;
+        printf("Enter Sequence Number: ");
+        scanf("%d", &seq_num);
+
         int operation;
         printf("Enter Operation Number: ");
         scanf("%d", &operation);
@@ -370,10 +376,6 @@ int main()
         {
             exit(EXIT_SUCCESS);
         }
-
-        int seq_num;
-        printf("Enter Sequence Number: ");
-        scanf("%d", &seq_num);
 
         printf("Enter Graph Name: ");
         scanf("%s", message.data.graph_name);
