@@ -337,7 +337,7 @@ void *dfs_mainthread(void *arg)
     }
     dtt->visited[dtt->current_vertex] = 1;
     int startingNode = dtt->current_vertex + 1;
-    
+
     // Debug logs
     printf("[Secondary Server] DFS Main Thread: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] DFS Main Thread: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -471,6 +471,28 @@ void *bfs_mainthread(void *arg)
         exit(EXIT_FAILURE);
     }
     dtt->current_vertex = *shmptr;
+
+    // Choose an appropriate size for your filename
+    char filename[250];
+    // Make sure the filename is null-terminated, and copy it to the 'filename' array
+    snprintf(filename, sizeof(filename), "%s", dtt->msg->data.graph_name);
+    // SEMAPHORE PART
+    char sema_name_rw[256];
+    snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
+    char sema_name_read[256];
+    snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+    // If O_CREAT is specified, and a semaphore with the given name already exists,
+    // then mode and value are ignored.
+    sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
+    sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+
+    printf("[Secondary Server] Waiting for the semaphore to be available\n");
+    sem_wait(read_sem);
+    current_readers++;
+    if (current_readers == 1)
+        sem_wait(rw_sem);
+    sem_post(read_sem);
+
     // Opening the Graph file to read the read the adjacency matrix
     FILE *fptr = fopen(dtt->msg->data.graph_name, "r");
     if (fptr == NULL)
@@ -494,6 +516,14 @@ void *bfs_mainthread(void *arg)
         }
     }
     fclose(fptr);
+
+    printf("[Secondary Server] Releasing the semaphore\n");
+
+    sem_wait(read_sem);
+    current_readers--;
+    if (current_readers == 0)
+        sem_post(rw_sem);
+    sem_post(read_sem);
 
     dtt->visited = (int *)malloc(*dtt->number_of_nodes * sizeof(int));
     for (int i = 0; i < *dtt->number_of_nodes; i++)
@@ -602,7 +632,7 @@ int main()
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids thread
-    pthread_t thread_ids[200] ;
+    pthread_t thread_ids[200];
 
     int channel;
     printf("[Secondary Server] Enter the channel number: ");
@@ -656,7 +686,7 @@ int main()
                 {
                     channel = SECONDARY_SERVER_CHANNEL_2;
                 }
-                
+
                 // Set the channel in the message structure
                 dtt->msg->msg_type = channel;
 
@@ -710,7 +740,7 @@ int main()
                 // Operation code for cleanup
                 for (int i = 1; i <= thread_counter; i++)
                 {
-                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    // printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)
