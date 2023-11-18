@@ -60,9 +60,11 @@ struct Queue
 // Code for queue
 // Function to create an empty queue
 
-struct Queue *createQueue() {
+struct Queue *createQueue()
+{
     struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
-    if (queue == NULL) {
+    if (queue == NULL)
+    {
         fprintf(stderr, "Memory allocation failed. Exiting program.\n");
         exit(EXIT_FAILURE);
     }
@@ -71,21 +73,26 @@ struct Queue *createQueue() {
     return queue;
 }
 
-int isEmpty(struct Queue *q) {
+int isEmpty(struct Queue *q)
+{
     return q->front == -1;
 }
 
-int isFull(struct Queue *q) {
+int isFull(struct Queue *q)
+{
     return q->rear == MAX_QUEUE_SIZE - 1;
 }
 
-void enqueue(struct Queue *q, int value) {
-    if (isFull(q)) {
+void enqueue(struct Queue *q, int value)
+{
+    if (isFull(q))
+    {
         printf("Queue is full. Cannot enqueue.\n");
         return;
     }
 
-    if (isEmpty(q)) {
+    if (isEmpty(q))
+    {
         q->front = 0;
     }
 
@@ -94,19 +101,24 @@ void enqueue(struct Queue *q, int value) {
     printf("Enqueued: %d\n", value);
 }
 
-int dequeue(struct Queue *q) {
+int dequeue(struct Queue *q)
+{
     int value;
 
-    if (isEmpty(q)) {
+    if (isEmpty(q))
+    {
         printf("Queue is empty. Cannot dequeue.\n");
         return -1;
     }
 
     value = q->items[q->front];
 
-    if (q->front == q->rear) {
+    if (q->front == q->rear)
+    {
         q->front = q->rear = -1;
-    } else {
+    }
+    else
+    {
         q->front++;
     }
 
@@ -114,27 +126,33 @@ int dequeue(struct Queue *q) {
     return value;
 }
 
-void display(struct Queue *q) {
-    if (isEmpty(q)) {
+void display(struct Queue *q)
+{
+    if (isEmpty(q))
+    {
         printf("Queue is empty.\n");
         return;
     }
 
     printf("Queue elements: ");
-    for (int i = q->front; i <= q->rear; i++) {
+    for (int i = q->front; i <= q->rear; i++)
+    {
         printf("%d ", q->items[i]);
     }
     printf("\n");
 }
 
-int queueSize(struct Queue *q) {
-    if (isEmpty(q)) {
+int queueSize(struct Queue *q)
+{
+    if (isEmpty(q))
+    {
         return 0;
-    } else {
+    }
+    else
+    {
         return q->rear - q->front + 1;
     }
 }
-
 
 /**
  * Used to pass data to threads for BFS and dfs processing.
@@ -164,7 +182,7 @@ void *dfs_subthread(void *arg)
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
 
     int currentVertex = dtt->current_vertex + 1;
-    printf("[Secondary Server] DFS Thread: Current vertex: %d\n", currentVertex);
+    printf("[Secondary Server] DFS Sub Thread: Current vertex: %d\n", currentVertex);
 
     int flag = 0;
     pthread_t dfs_thread_id[*dtt->number_of_nodes];
@@ -206,11 +224,9 @@ void *dfs_subthread(void *arg)
     }
 
     // Exit the DFS thread
-    printf("[Secondary Server] DFS Thread: Exiting DFS Thread\n");
+    printf("[Secondary Server] DFS Sub Thread: Exiting DFS Thread\n");
     pthread_exit(NULL);
 }
-
-
 
 /**
  * @brief Will be called by the main thread of the secondary server to perform DFS
@@ -234,7 +250,7 @@ void *dfs_mainthread(void *arg)
     // we want to ensure that each request has a unique shared memory
     while ((shm_key = ftok(".", dtt->msg->data.seq_num)) == -1)
     {
-        perror("[Secondary Server] Error while generating key for shared memory");
+        perror("[Secondary Server] DFS Main Thread: Error while generating key for shared memory");
         exit(EXIT_FAILURE);
     }
     printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
@@ -242,13 +258,13 @@ void *dfs_mainthread(void *arg)
     // Connect to the shared memory using the key
     if ((shm_id = shmget(shm_key, sizeof(int), 0666)) < 0)
     {
-        perror("[Secondary Server] Error occurred while connecting to shm\n");
+        perror("[Secondary Server] DFS Main Thread: Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
     }
     // Attach to the shared memory
     if ((shmptr = (int *)shmat(shm_id, NULL, 0)) == (void *)-1)
     {
-        perror("[Secondary Server] Error in shmat \n");
+        perror("[Secondary Server] DFS Main Thread: Error in shmat \n");
         exit(EXIT_FAILURE);
     }
 
@@ -259,7 +275,7 @@ void *dfs_mainthread(void *arg)
     FILE *fptr = fopen(dtt->msg->data.graph_name, "r");
     if (fptr == NULL)
     {
-        printf("[Seconday Server] Error opening file");
+        printf("[Seconday Server] DFS Main Thread: Error opening file");
         exit(EXIT_FAILURE);
     }
     fscanf(fptr, "%d", dtt->number_of_nodes);
@@ -289,9 +305,9 @@ void *dfs_mainthread(void *arg)
     int startingNode = dtt->current_vertex + 1;
 
     // Debug logs
-    printf("[Secondary Server] DFS Request: Adjacency Matrix Read Successfully\n");
-    printf("[Secondary Server] DFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
-    printf("[Secondary Server] DFS Request: Starting vertex: %d\n", startingNode);
+    printf("[Secondary Server] DFS Main Thread: Adjacency Matrix Read Successfully\n");
+    printf("[Secondary Server] DFS Main Thread: Number of nodes: %d\n", *dtt->number_of_nodes);
+    printf("[Secondary Server] DFS Main Thread: Starting vertex: %d\n", startingNode);
 
     // All the subthreads
     pthread_t dfs_thread_id[*dtt->number_of_nodes];
@@ -340,24 +356,24 @@ void *dfs_mainthread(void *arg)
     dtt->msg->msg_type = dtt->msg->data.seq_num;
     dtt->msg->data.operation = 0;
 
-    printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg->msg_type, *dtt->msg_queue_id);
+    printf("[Secondary Server] DFS Main Thread: Sending reply to the client %ld @ %d\n", dtt->msg->msg_type, *dtt->msg_queue_id);
 
     if (msgsnd(*dtt->msg_queue_id, dtt->msg, sizeof(struct data), 0) == -1)
     {
-        perror("[Secondary Server] Message could not be sent, please try again");
+        perror("[Secondary Server] DFS Main Thread: Message could not be sent, please try again");
         exit(EXIT_FAILURE);
     }
 
     // Detach from the shared memory
     if (shmdt(shmptr) == -1)
     {
-        perror("[Secondary Server] Could not detach from shared memory\n");
+        perror("[Secondary Server] DFS Main Thread: Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
     printf("[Secondary Server] DFS Main Thread: Freeing dtt");
     free(dtt);
     // Exit the DFS thread
-    printf("[Secondary Server] DFS Request: Exiting DFS Request\n");
+    printf("[Secondary Server] DFS Main Thread: Exiting DFS Request\n");
     printf("[Secondary Server] Successfully Completed Operation 3\n");
     pthread_exit(NULL);
 }
@@ -365,10 +381,11 @@ void *dfs_mainthread(void *arg)
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-    //dtt->bfs_queue= createQueue();
-    // Lock
+    // dtt->bfs_queue= createQueue();
+    //  Lock
     pthread_mutex_lock(dtt->mutexLock);
-    dtt->msg->data.graph_name[*dtt->index] = dtt->current_vertex;
+    int node = dtt->current_vertex + 1;
+    dtt->msg->data.graph_name[*dtt->index] = (char)node;
     *dtt->index = *dtt->index + 1;
     dtt->msg->data.graph_name[*dtt->index] = '*';
     // Unlock
@@ -385,7 +402,7 @@ void *bfs_subthread(void *arg)
     }
 
     // Exit
-    printf("Secondary Server: Exiting the BFS Thread");
+    printf("[Secondary Server] BFS Sub Thread: Exiting...");
     pthread_exit(NULL);
 }
 
@@ -402,21 +419,21 @@ void *bfs_mainthread(void *arg)
     // we want to ensure that each request has a unique shared memory
     while ((shm_key = ftok(".", dtt->msg->data.seq_num)) == -1)
     {
-        perror("[Secondary Server] Error while generating key for shared memory");
+        perror("[Secondary Server] BFS Main Thread: Error while generating key for shared memory");
         exit(EXIT_FAILURE);
     }
-    printf("[Secondary Server] Generated shared memory key %d\n", shm_key);
+    printf("[Secondary Server] BFS Main Thread: Generated shared memory key %d\n", shm_key);
 
     // Connect to the shared memory using the key
     if ((shm_id = shmget(shm_key, sizeof(int), 0666)) < 0)
     {
-        perror("[Secondary Server] Error occurred while connecting to shm\n");
+        perror("[Secondary Server] BFS Main Thread: Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
     }
     // Attach to the shared memory
     if ((shmptr = (int *)shmat(shm_id, NULL, 0)) == (void *)-1)
     {
-        perror("[Secondary Server] Error in shmat \n");
+        perror("[Secondary Server] BFS Main Thread: Error in shmat \n");
         exit(EXIT_FAILURE);
     }
     dtt->current_vertex = *shmptr;
@@ -424,7 +441,7 @@ void *bfs_mainthread(void *arg)
     FILE *fptr = fopen(dtt->msg->data.graph_name, "r");
     if (fptr == NULL)
     {
-        printf("[Seconday Server] Error opening file");
+        printf("[Seconday Server] BFS Main Thread: Error opening file");
         exit(EXIT_FAILURE);
     }
     fscanf(fptr, "%d", dtt->number_of_nodes);
@@ -453,26 +470,28 @@ void *bfs_mainthread(void *arg)
     int starting_vertex = dtt->current_vertex + 1;
     dtt->visited[dtt->current_vertex] = 1;
     // Debugging
-    printf("[Secondary Server] BFS Request: Adjacency Matrix Read Successfully\n");
-    printf("[Secondary Server] BFS Request: Number of nodes: %d\n", *dtt->number_of_nodes);
-    printf("[Secondary Server] BFS Request: Starting vertex: %d\n", starting_vertex);
+    printf("[Secondary Server] BFS Main Thread: Adjacency Matrix Read Successfully\n");
+    printf("[Secondary Server] BFS Main Thread: Number of nodes: %d\n", *dtt->number_of_nodes);
+    printf("[Secondary Server] BFS Main Thread: Starting vertex: %d\n", starting_vertex);
 
     // int currentVertex= dtt->current_vertex;
     // push starting vertex into queue
-    //dtt->bfs_queue= createQueue();
-    enqueue((dtt->bfs_queue), starting_vertex);
+    // dtt->bfs_queue= createQueue();
+    enqueue((dtt->bfs_queue), dtt->current_vertex);
     // printf("Entry in queue is: %d", starting_vertex);
-    int entry = 0;
+
     while (!isEmpty((dtt->bfs_queue)))
     {
-	
+        int entry = 0;
         int queue_size = queueSize((dtt->bfs_queue));
         printf("Queue size: %d\n", queue_size);
         int array[queue_size];
         // Copy entries into array, empty queue
-        
-        array[entry++] = dequeue((dtt->bfs_queue));
-     
+
+        while (!isEmpty(dtt->bfs_queue))
+        {
+            array[entry++] = dequeue((dtt->bfs_queue));
+        }
 
         pthread_t subthread_ids[queue_size];
         int threads[queue_size];
@@ -484,44 +503,41 @@ void *bfs_mainthread(void *arg)
             *newdtt = *dtt;
             newdtt->current_vertex = array[i];
             pthread_create(&subthread_ids[i], NULL, bfs_subthread, (void *)newdtt);
-            printf("This loop is being entered\n");
             threads[threadIndex++] = i;
-            //free(newdtt);
+            // free(newdtt);
         }
 
         // Join all the subthreads
-         for (int i = 0; i < threadIndex; i++)
-         {
+        for (int i = 0; i < threadIndex; i++)
+        {
             pthread_join(subthread_ids[threads[i]], NULL);
-         }
-     }
-     
-    
+        }
+    }
 
     // dtt->msg->data.graph_name[++(*dtt->index)] = '\0';
     // Sending shit to client
     dtt->msg->msg_type = dtt->msg->data.seq_num;
     dtt->msg->data.operation = 0;
 
-    printf("[Secondary Server] Sending reply to the client %ld @ %d\n", dtt->msg->msg_type, *dtt->msg_queue_id);
+    printf("[Secondary Server] BFS Main Thread: Sending reply to the client %ld @ %d\n", dtt->msg->msg_type, *dtt->msg_queue_id);
 
     if (msgsnd(*dtt->msg_queue_id, dtt->msg, sizeof(struct data), 0) == -1)
     {
-        perror("[Secondary Server] Message could not be sent, please try again");
+        perror("[Secondary Server] BFS Main Thread: Message could not be sent, please try again");
         exit(EXIT_FAILURE);
     }
 
     // Detach from the shared memory
     if (shmdt(shmptr) == -1)
     {
-        perror("[Secondary Server] Could not detach from shared memory\n");
+        perror("[Secondary Server] BFS Main Thread: Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
     printf("[Secondary Server] BFS Main Thread: Freeing dtt\n");
     free(dtt);
 
     // Exit the BFS thread
-    printf("[Secondary Server] BFS Request: Exiting BFS Request\n");
+    printf("[Secondary Server] BFS Main Thread: Exiting...\n");
     printf("[Secondary Server] Successfully Completed Operation 4\n");
     pthread_exit(NULL);
 }
@@ -627,8 +643,7 @@ int main()
                 *dtt->index = 0;
                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-                dtt->bfs_queue = (struct Queue *)malloc(sizeof(struct Queue));
-                dtt->bfs_queue= createQueue();
+                dtt->bfs_queue = createQueue();
 
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;

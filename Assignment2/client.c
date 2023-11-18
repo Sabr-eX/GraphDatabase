@@ -266,7 +266,7 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
 
     int shmptr_index = 0;
     // Store data in shared memory using array traversals
-    shmptr[shmptr_index++] = starting_vertex - 1;
+    shmptr[shmptr_index++] = (starting_vertex - 1);
 
     // Change message channel to load balancer and send it to load balancer
     message.msg_type = LOAD_BALANCER_CHANNEL;
@@ -286,7 +286,14 @@ void operation_four(int msg_queue_id, int seq_num, struct msg_buffer message)
             perror("[Client] Error while receiving message from secondary server");
         }
         printf("[Client] Message received from the secondary Server: %ld -> %s using %ld\n", message.msg_type, message.data.graph_name, message.data.operation);
-        printf("[Client] Operation done successfully");
+        int i = 0;
+
+        while (message.data.graph_name[i] != '*')
+        {
+            printf("%d ", message.data.graph_name[i]);
+            i++;
+        }
+        printf("\n[Client] Operation done successfully");
     }
 
     // Detach shared memory and delete it
