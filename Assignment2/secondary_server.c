@@ -669,7 +669,6 @@ int main()
     // Create the message queue
     key_t key;
     int msg_queue_id;
-    struct msg_buffer msg;
 
     // Link it with a key which lets you use the same key to communicate from both sides
     if ((key = ftok(".", 'B')) == -1)
@@ -708,17 +707,18 @@ int main()
     while (1)
     {
         struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread)); // Declare dtt here
+        struct msg_buffer *msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
 
-        if (msgrcv(msg_queue_id, &msg, sizeof(msg.data), channel, 0) == -1)
+        if (msgrcv(msg_queue_id, msg, sizeof(msg->data), channel, 0) == -1)
         {
             perror("[Secondary Server] Error while receiving message from the client");
             exit(EXIT_FAILURE);
         }
         else
         {
-            printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg.data.operation, msg.data.graph_name);
+            printf("[Secondary Server] Received a message from Client: Op: %ld File Name: %s\n", msg->data.operation, msg->data.graph_name);
 
-            if (msg.data.operation == 3)
+            if (msg->data.operation == 3)
             {
                 // Operation code for DFS request
                 // Create a data_to_thread structure
@@ -736,11 +736,11 @@ int main()
                 }
 
                 *dtt->msg_queue_id = msg_queue_id;
-                dtt->msg = &msg;
+                dtt->msg = msg;
 
                 // Determine the channel based on seq_num
                 int channel;
-                if (msg.data.seq_num % 2 == 1)
+                if (msg->data.seq_num % 2 == 1)
                 {
                     channel = SECONDARY_SERVER_CHANNEL_1;
                 }
@@ -753,14 +753,14 @@ int main()
                 dtt->msg->msg_type = channel;
 
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, dfs_mainthread, (void *)dtt) != 0)
+                if (pthread_create(&thread_ids[msg->data.seq_num], NULL, dfs_mainthread, (void *)dtt) != 0)
                 {
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-                threads[threadIndex++] = msg.data.seq_num;
+                threads[threadIndex++] = msg->data.seq_num;
             }
-            else if (msg.data.operation == 4)
+            else if (msg->data.operation == 4)
             {
                 // Operation code for BFS request
                 // Create a data_to_thread structure
@@ -787,11 +787,11 @@ int main()
                 dtt->bfs_queue = createQueue();
 
                 *dtt->msg_queue_id = msg_queue_id;
-                dtt->msg = &msg;
+                dtt->msg = msg;
 
                 // Determine the channel based on seq_num
                 int channel;
-                if (msg.data.seq_num % 2 == 1)
+                if (msg->data.seq_num % 2 == 1)
                 {
                     channel = SECONDARY_SERVER_CHANNEL_1;
                 }
@@ -804,14 +804,14 @@ int main()
                 dtt->msg->msg_type = channel;
 
                 // Create a new thread to handle BFS
-                if (pthread_create(&thread_ids[msg.data.seq_num], NULL, bfs_mainthread, (void *)dtt) != 0)
+                if (pthread_create(&thread_ids[msg->data.seq_num], NULL, bfs_mainthread, (void *)dtt) != 0)
                 {
                     perror("[Secondary Server] Error in BFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-                threads[threadIndex++] = msg.data.seq_num;
+                threads[threadIndex++] = msg->data.seq_num;
             }
-            else if (msg.data.operation == 5)
+            else if (msg->data.operation == 5)
             {
                 // Operation code for cleanup
                 for (int i = 0; i < threadIndex; i++)
