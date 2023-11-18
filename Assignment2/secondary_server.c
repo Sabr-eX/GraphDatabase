@@ -1,6 +1,6 @@
 /**
  * @file secondary_server.c
- * @author kumarasamy chelliah and anagha g
+ * @author Kumarasamy Chelliah and anagha g
  * @brief
  * @version 0.1
  * @date 2023-11-10
@@ -51,6 +51,7 @@ struct msg_buffer
     struct data data;
 };
 
+// Code for queue
 // Queue structure
 struct Queue
 {
@@ -59,7 +60,6 @@ struct Queue
     int rear;
 };
 
-// Code for queue
 // Function to create an empty queue
 
 struct Queue *createQueue()
@@ -159,12 +159,14 @@ int queueSize(struct Queue *q)
 /**
  * Used to pass data to threads for BFS and dfs processing.
  * It includes a message queue ID and a message buffer.
- * Storage pointer is used to store the SHM pointer address.
+ * Index is the index at which the next vertex number should be entered into graph_name[]
  * Number of nodes is the number of nodes in the graph.
  * Adjacency matrix is the adjacency matrix of the graph
  * Visited is an array to keep track of visited nodes.
- * Mutexlock to keep track of when we are editing the output
+ * Mutexlock to keep track of when we are editing the output i.e. graph_name[]
+ * QueueLock to keep track of when BFS threads are editing the queue
  * Current Vertex to keep track of current vertex
+ * BFS Queue is the queue used in BFS
  */
 struct data_to_thread
 {
@@ -175,6 +177,7 @@ struct data_to_thread
     int **adjacency_matrix;
     int *visited;
     pthread_mutex_t *mutexLock;
+    pthread_mutex_t *queueLock;
     int current_vertex;
     struct Queue *bfs_queue;
 };
@@ -232,7 +235,7 @@ void *dfs_subthread(void *arg)
 
 /**
  * @brief Will be called by the main thread of the secondary server to perform DFS
- * It will find the starting vertex from the shared memory and then perform DFSS
+ * It will find the starting vertex from the shared memory and then perform DFS
  *
  *
  * @param arg
@@ -431,7 +434,9 @@ void *bfs_subthread(void *arg)
     {
         if ((dtt->adjacency_matrix[dtt->current_vertex][i] == 1) && (dtt->visited[i] == 0))
         {
+            pthread_mutex_lock(dtt->queueLock);
             enqueue((dtt->bfs_queue), i);
+            pthread_mutex_unlock(dtt->queueLock);
         }
     }
 
@@ -708,6 +713,7 @@ int main()
                 *dtt->index = 0;
                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
+                dtt->queueLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 dtt->bfs_queue = createQueue();
 
                 *dtt->msg_queue_id = msg_queue_id;
