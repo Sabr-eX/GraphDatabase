@@ -295,7 +295,7 @@ void *dfs_mainthread(void *arg)
     printf("[Secondary Server] Waiting for the semaphore to be available\n");
     sem_wait(read_sem);
     int current_readers = 0;
-    sem_getvalue(&read_count, &current_readers);
+    sem_getvalue(read_count, &current_readers);
     if (current_readers == 1)
         sem_wait(rw_sem);
     sem_post(read_sem);
@@ -329,7 +329,7 @@ void *dfs_mainthread(void *arg)
 
     printf("[Secondary Server] Releasing the semaphore\n");
     sem_wait(read_sem);
-    sem_getvalue(&read_count, &current_readers);
+    sem_getvalue(read_count, &current_readers);
     current_readers--;
     if (current_readers == 0)
         sem_post(rw_sem);
@@ -510,7 +510,7 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] Waiting for the semaphore to be available\n");
     sem_wait(read_sem);
     int current_readers = 0;
-    sem_getvalue(&read_count, &current_readers);
+    sem_getvalue(read_count, &current_readers);
     if (current_readers == 1)
         sem_wait(rw_sem);
     sem_post(read_sem);
@@ -542,7 +542,7 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] Releasing the semaphore\n");
 
     sem_wait(read_sem);
-    sem_getvalue(&read_count, &current_readers);
+    sem_getvalue(read_count, &current_readers);
     current_readers--;
     if (current_readers == 0)
         sem_post(rw_sem);
