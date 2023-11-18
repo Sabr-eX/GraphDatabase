@@ -76,7 +76,7 @@ void cleanup(int msg_queue_id)
 
     printf("[Load Balancer] Cleanup message sent to all servers\n");
     // Sleep for a while to allow servers to perform cleanup
-    sleep(15);
+    sleep(5);
 
     // Destroy the message queue
     if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)

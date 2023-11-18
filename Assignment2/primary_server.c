@@ -139,7 +139,6 @@ void *writeToNewGraphFile(void *arg)
             fprintf(fp, "\n");
         }
         fclose(fp);
-        sleep(10);
         printf("[Primary Server] Successfully written to the file %s for seq: %ld\n", filename, dtt->msg.data.seq_num);
     }
     // Release the semaphore
