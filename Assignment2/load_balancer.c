@@ -86,7 +86,7 @@ void cleanup(int msg_queue_id)
     // Destroy all mutexes
     // Choose an appropriate size for your filename
     char filename[250];
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i <= 20; i++)
     {
         // Make sure the filename is null-terminated, and copy it to the 'filename' array
         snprintf(filename, sizeof(filename), "G%d.txt", i);
