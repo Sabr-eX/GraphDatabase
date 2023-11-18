@@ -165,6 +165,10 @@ void *writeToNewGraphFile(void *arg)
         exit(EXIT_FAILURE);
     }
     printf("[Primary Server] Successfully Completed Operation 1\n");
+
+    // Free dtt
+    printf("[Primary Server] Freeing dtt\n");
+    free(dtt);
     pthread_exit(NULL);
 }
 
@@ -202,7 +206,7 @@ int main()
     printf("[Primary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids
-    pthread_t thread_ids[MAX_THREADS] ;
+    pthread_t thread_ids[MAX_THREADS];
 
     // Listen to the message queue for new requests from the clients
     while (1)
@@ -228,10 +232,10 @@ int main()
             }
             else if (msg.data.operation == 5)
             {
-               // Operation code for cleanup
+                // Operation code for cleanup
                 for (int i = 1; i <= thread_counter; i++)
                 {
-                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    // printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)
