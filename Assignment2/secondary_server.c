@@ -165,6 +165,7 @@ int queueSize(struct Queue *q)
  * Visited is an array to keep track of visited nodes.
  * Mutexlock to keep track of when we are editing the output
  * Current Vertex to keep track of current vertex
+ * Queue to keep track of the queue
  */
 struct data_to_thread
 {
@@ -666,12 +667,12 @@ int main()
             {
                 // Operation code for DFS request
                 // Create a data_to_thread structure
-                dtt->msg_queue_id = malloc(sizeof(int));
-                dtt->msg = malloc(sizeof(struct msg_buffer));
-                dtt->index = malloc(sizeof(int));
+                dtt->msg_queue_id = (int *)malloc(sizeof(int));
+                dtt->msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
+                dtt->index = (int *)malloc(sizeof(int));
                 *dtt->index = 0;
-                dtt->number_of_nodes = malloc(sizeof(int));
-                dtt->mutexLock = malloc(sizeof(pthread_mutex_t));
+                dtt->number_of_nodes = (int *)malloc(sizeof(int));
+                dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
 
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;
@@ -700,7 +701,7 @@ int main()
             }
             else if (msg.data.operation == 4)
             {
-                // Operation code for DFS request
+                // Operation code for BFS request
                 // Create a data_to_thread structure
                 dtt->msg_queue_id = (int *)malloc(sizeof(int));
                 dtt->msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
