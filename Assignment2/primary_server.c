@@ -139,7 +139,7 @@ void *writeToNewGraphFile(void *arg)
             fprintf(fp, "\n");
         }
         fclose(fp);
-        sleep(5);
+        sleep(10);
         printf("[Primary Server] Successfully written to the file %s for seq: %ld\n", filename, dtt->msg.data.seq_num);
     }
     // Release the semaphore
@@ -245,6 +245,15 @@ int main()
                         }
                     }
                 }
+
+                // Send the cleanup message to the load balancer
+                msg.msg_type = LOAD_BALANCER_CHANNEL;
+                msg.data.operation = 6;
+                if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+                {
+                    perror("[Primary Server] Error while sending cleanup message to Load Balancer");
+                }
+
                 printf("[Primary Server] Terminating...\n");
                 exit(EXIT_SUCCESS);
             }

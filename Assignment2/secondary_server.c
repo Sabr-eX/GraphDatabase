@@ -825,6 +825,14 @@ int main()
                     }
                 }
 
+                // Send the cleanup message to the load balancer
+                msg.msg_type = LOAD_BALANCER_CHANNEL;
+                msg.data.operation = 7;
+                if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
+                {
+                    perror("[Secondary Server] Error while sending cleanup message to Load Balancer");
+                }
+
                 printf("[Secondary Server] Terminating...\n");
                 exit(EXIT_SUCCESS);
             }

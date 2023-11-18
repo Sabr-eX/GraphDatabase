@@ -56,6 +56,7 @@ void cleanup(int msg_queue_id)
     terminationMessage.msg_type = PRIMARY_SERVER_CHANNEL;
     terminationMessage.data.operation = 5; // Operation code for termination
 
+    // Send termination message to all servers
     if (msgsnd(msg_queue_id, &terminationMessage, sizeof(terminationMessage.data), 0) == -1)
     {
         perror("[Load Balancer] Error while sending cleanup message to Primary Server");
@@ -71,6 +72,44 @@ void cleanup(int msg_queue_id)
     if (msgsnd(msg_queue_id, &terminationMessage, sizeof(terminationMessage.data), 0) == -1)
     {
         perror("[Load Balancer] Error while sending cleanup message to Secondary Server 2");
+    }
+
+    // Wait for acknowledgement from all servers
+    struct msg_buffer acknowledgementMessage;
+    if (msgrcv(msg_queue_id, &acknowledgementMessage, sizeof(acknowledgementMessage.data), LOAD_BALANCER_CHANNEL, 0) == -1)
+    {
+        perror("[Load Balancer] Error while receiving acknowledgement from Primary Server");
+    }
+    else
+    {
+        if (acknowledgementMessage.data.operation == 6)
+            printf("[Load Balancer] Received acknowledgement from Primary Server\n");
+        else if (acknowledgementMessage.data.operation == 7)
+            printf("[Load Balancer] Received acknowledgement from Secondary Server \n");
+    }
+    // Secondary Server
+    if (msgrcv(msg_queue_id, &acknowledgementMessage, sizeof(acknowledgementMessage.data), LOAD_BALANCER_CHANNEL, 0) == -1)
+    {
+        perror("[Load Balancer] Error while receiving acknowledgement from Secondary Server 1");
+    }
+    else
+    {
+        if (acknowledgementMessage.data.operation == 6)
+            printf("[Load Balancer] Received acknowledgement from Primary Server\n");
+        else if (acknowledgementMessage.data.operation == 7)
+            printf("[Load Balancer] Received acknowledgement from Secondary Server \n");
+    }
+    // Secondary Server
+    if (msgrcv(msg_queue_id, &acknowledgementMessage, sizeof(acknowledgementMessage.data), LOAD_BALANCER_CHANNEL, 0) == -1)
+    {
+        perror("[Load Balancer] Error while receiving acknowledgement from Secondary Server 2");
+    }
+    else
+    {
+        if (acknowledgementMessage.data.operation == 6)
+            printf("[Load Balancer] Received acknowledgement from Primary Server\n");
+        else if (acknowledgementMessage.data.operation == 7)
+            printf("[Load Balancer] Received acknowledgement from Secondary Server \n");
     }
 
     // Sleep for a while to allow servers to perform cleanup
