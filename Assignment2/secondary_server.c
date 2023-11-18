@@ -30,6 +30,8 @@
 #define MAX_VERTICES 100
 #define MAX_QUEUE_SIZE 100
 
+int current_readers = 0;
+
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
  */
@@ -271,29 +273,61 @@ void *dfs_mainthread(void *arg)
     // Take input of vertex from shared memory
     dtt->current_vertex = *shmptr;
 
-    // Opening the Graph file to read the read the adjacency matrix
-    FILE *fptr = fopen(dtt->msg->data.graph_name, "r");
+    // Choose an appropriate size for your filename
+    char filename[250];
+    // Make sure the filename is null-terminated, and copy it to the 'filename' array
+    snprintf(filename, sizeof(filename), "%s", dtt->msg->data.graph_name);
+    // SEMAPHORE PART
+    char sema_name_rw[256];
+    snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
+    char sema_name_read[256];
+    snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+    // If O_CREAT is specified, and a semaphore with the given name already exists,
+    // then mode and value are ignored.
+    sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
+    sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+
+    printf("[Secondary Server] Waiting for the semaphore to be available\n");
+    sem_wait(read_sem);
+    current_readers++;
+    if (current_readers == 1)
+        sem_wait(rw_sem);
+    sem_post(read_sem);
+
+    FILE *fptr = fopen(filename, "r");
     if (fptr == NULL)
     {
         printf("[Seconday Server] DFS Main Thread: Error opening file");
         exit(EXIT_FAILURE);
     }
-    fscanf(fptr, "%d", dtt->number_of_nodes);
+    else
+    {
+        printf("[Secondary Server] Successfully opened the file %s\n", filename);
+        fscanf(fptr, "%d", dtt->number_of_nodes);
 
-    // Allocate space for adjacency matrix
-    dtt->adjacency_matrix = (int **)malloc((*dtt->number_of_nodes) * sizeof(int *));
-    for (int i = 0; i < (*dtt->number_of_nodes); i++)
-    {
-        dtt->adjacency_matrix[i] = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
-    }
-    for (int i = 0; i < (*dtt->number_of_nodes); i++)
-    {
-        for (int j = 0; j < (*dtt->number_of_nodes); j++)
+        // Allocate space for adjacency matrix
+        dtt->adjacency_matrix = (int **)malloc((*dtt->number_of_nodes) * sizeof(int *));
+        for (int i = 0; i < (*dtt->number_of_nodes); i++)
         {
-            fscanf(fptr, "%d", &(dtt->adjacency_matrix[i][j]));
+            dtt->adjacency_matrix[i] = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
         }
+        for (int i = 0; i < (*dtt->number_of_nodes); i++)
+        {
+            for (int j = 0; j < (*dtt->number_of_nodes); j++)
+            {
+                fscanf(fptr, "%d", &(dtt->adjacency_matrix[i][j]));
+            }
+        }
+        fclose(fptr);
     }
-    fclose(fptr);
+
+    printf("[Secondary Server] Releasing the semaphore\n");
+
+    sem_wait(read_sem);
+    current_readers--;
+    if (current_readers == 0)
+        sem_post(rw_sem);
+    sem_post(read_sem);
 
     // Allocate space for visited array
     dtt->visited = (int *)malloc((*dtt->number_of_nodes) * sizeof(int));
@@ -303,7 +337,7 @@ void *dfs_mainthread(void *arg)
     }
     dtt->visited[dtt->current_vertex] = 1;
     int startingNode = dtt->current_vertex + 1;
-
+    
     // Debug logs
     printf("[Secondary Server] DFS Main Thread: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] DFS Main Thread: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -370,7 +404,7 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] DFS Main Thread: Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
-    printf("[Secondary Server] DFS Main Thread: Freeing dtt");
+    printf("[Secondary Server] DFS Main Thread: Freeing dtt\n");
     free(dtt);
     // Exit the DFS thread
     printf("[Secondary Server] DFS Main Thread: Exiting DFS Request\n");
@@ -568,7 +602,7 @@ int main()
     printf("[Secondary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids thread
-    pthread_t thread_ids[200] = {0};
+    pthread_t thread_ids[200] ;
 
     int channel;
     printf("[Secondary Server] Enter the channel number: ");
@@ -583,7 +617,7 @@ int main()
     }
 
     printf("[Secondary Server] Using Channel: %d\n", channel);
-
+    int thread_counter = 0;
     // Listen to the message queue for new requests from the clients
     while (1)
     {
@@ -622,7 +656,7 @@ int main()
                 {
                     channel = SECONDARY_SERVER_CHANNEL_2;
                 }
-
+                
                 // Set the channel in the message structure
                 dtt->msg->msg_type = channel;
 
@@ -632,6 +666,7 @@ int main()
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
+                thread_counter++;
             }
             else if (msg.data.operation == 4)
             {
@@ -668,13 +703,14 @@ int main()
                     perror("[Secondary Server] Error in BFS thread creation");
                     exit(EXIT_FAILURE);
                 }
+                thread_counter++;
             }
             else if (msg.data.operation == 5)
             {
                 // Operation code for cleanup
-                for (int i = 0; i < MAX_THREADS; i++)
+                for (int i = 1; i <= thread_counter; i++)
                 {
-                    printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)

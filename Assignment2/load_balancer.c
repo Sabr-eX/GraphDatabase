@@ -75,13 +75,36 @@ void cleanup(int msg_queue_id)
 
     // Sleep for a while to allow servers to perform cleanup
     sleep(5);
-    
 
     // Destroy the message queue
     if (msgctl(msg_queue_id, IPC_RMID, NULL) == -1)
     {
         perror("[Load Balancer] Error while destroying the message queue");
     }
+    printf("[Load Balancer] Message queue destroyed\n");
+
+    // Destroy all mutexes
+    // Choose an appropriate size for your filename
+    char filename[250];
+    for (int i = 0; i < 20; i++)
+    {
+        // Make sure the filename is null-terminated, and copy it to the 'filename' array
+        snprintf(filename, sizeof(filename), "G%d.txt", i);
+        // SEMAPHORE PART
+        char sema_name_rw[256];
+        snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
+        char sema_name_read[256];
+        snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+        // If O_CREAT is specified, and a semaphore with the given name already exists,
+        // then mode and value are ignored.
+        sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
+        sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+
+        // Destroy the semaphores
+        sem_close(rw_sem);
+        sem_close(read_sem);
+    }
+    printf("[Load Balancer] Semaphores destroyed\n");
 
     printf("[Load Balancer] Cleanup process completed. Exiting.\n");
     exit(EXIT_SUCCESS);
@@ -137,7 +160,6 @@ int main()
             if (msg.data.operation == 5)
             {
                 cleanup(msg_queue_id);
-                
             }
             else if (msg.data.operation == 1 || msg.data.operation == 2)
             {

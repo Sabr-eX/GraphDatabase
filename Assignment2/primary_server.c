@@ -103,24 +103,23 @@ void *writeToNewGraphFile(void *arg)
         }
     }
 
-    // It's time to open the file and write the data to it
-    FILE *fp;
     // Choose an appropriate size for your filename
     char filename[250];
     // Make sure the filename is null-terminated, and copy it to the 'filename' array
     snprintf(filename, sizeof(filename), "%s", dtt->msg.data.graph_name);
-    fp = fopen(filename, "w");
-
     // SEMAPHORE PART
-    char sema_name_read[256];
-    snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
-    char sema_name_write[256];
-    snprintf(sema_name_write, sizeof(sema_name_write), "write_%s", filename);
+    char sema_name_rw[256];
+    snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
     // If O_CREAT is specified, and a semaphore with the given name already exists,
     // then mode and value are ignored.
-    sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 200);
-    sem_t *write_sem = sem_open(sema_name_write, O_CREAT, 0644, 1);
+    sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
 
+    // It's time to open the file and write the data to it
+    // Wait for the semaphore to be available
+    printf("[Primary Server] Waiting for the semaphore to be available\n");
+    sem_wait(rw_sem);
+
+    FILE *fp = fopen(filename, "w");
     if (fp == NULL)
     {
         perror("[Primary Server] Error while opening the file");
@@ -128,10 +127,7 @@ void *writeToNewGraphFile(void *arg)
     }
     else
     {
-        printf("[Primary Server] Waiting for the semaphore to be available\n");
-        // Wait for the semaphore to be available
-        sem_wait(write_sem);
-        sem_wait(read_sem);
+        printf("[Primary Server] Successfully opened the file %s\n", filename);
         // Write the data to the file
         fprintf(fp, "%d\n", number_of_nodes);
         for (int i = 0; i < number_of_nodes; i++)
@@ -144,12 +140,11 @@ void *writeToNewGraphFile(void *arg)
         }
         fclose(fp);
         sleep(5);
-        // Release the semaphore
-        sem_post(read_sem);
-        sem_post(write_sem);
-        printf("[Primary Server] Released the semaphore\n");
+        printf("[Primary Server] Successfully written to the file %s for seq: %ld\n", filename, dtt->msg.data.seq_num);
     }
-    printf("[Primary Server] Successfully written to the file %s for seq: %ld\n", filename, dtt->msg.data.seq_num);
+    // Release the semaphore
+    printf("[Primary Server] Released the semaphore\n");
+    sem_post(rw_sem);
 
     // Send reply to the client
     dtt->msg.msg_type = dtt->msg.data.seq_num;
@@ -189,6 +184,7 @@ int main()
     key_t key;
     int msg_queue_id;
     struct msg_buffer msg;
+    int thread_counter = 0;
 
     // Link it with a key which lets you use the same key to communicate from both sides
     if ((key = ftok(".", 'B')) == -1)
@@ -206,7 +202,7 @@ int main()
     printf("[Primary Server] Successfully connected to the Message Queue with Key:%d ID:%d\n", key, msg_queue_id);
 
     // Store the thread_ids
-    pthread_t thread_ids[MAX_THREADS] = {0};
+    pthread_t thread_ids[MAX_THREADS] ;
 
     // Listen to the message queue for new requests from the clients
     while (1)
@@ -226,24 +222,26 @@ int main()
                 struct data_to_thread *dtt = (struct data_to_thread *)malloc(sizeof(struct data_to_thread));
                 dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = msg;
-                //thread_exists[msg.data.seq_num] = 1;
+                // thread_exists[msg.data.seq_num] = 1;
                 pthread_create(&thread_ids[msg.data.seq_num], NULL, writeToNewGraphFile, (void *)dtt);
+                thread_counter++;
             }
             else if (msg.data.operation == 5)
             {
                // Operation code for cleanup
-                for (int i = 0; i < 200; i++)
+                for (int i = 1; i <= thread_counter; i++)
                 {
-                    //printf("%d %lu\n",i,thread_ids[i]);
-                    if (thread_ids[i] != 0){
-                        if(pthread_join(thread_ids[i], NULL) != 0){
+                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    if (thread_ids[i] != 0)
+                    {
+                        if (pthread_join(thread_ids[i], NULL) != 0)
+                        {
                             perror("[Primary Server] Error joining thread");
                         }
                     }
                 }
                 printf("[Primary Server] Terminating...\n");
                 exit(EXIT_SUCCESS);
-
             }
         }
     }
