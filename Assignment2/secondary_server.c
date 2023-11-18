@@ -296,10 +296,11 @@ void *dfs_mainthread(void *arg)
     // then mode and value are ignored.
     sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
     sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
-    sem_t *read_count = sem_open("Assignment_Read_Count", O_CREAT, 0644, 200);
+    sem_t *read_count = sem_open("Assignment_Read_Count", O_CREAT, 0644, 0);
 
     printf("[Secondary Server] Waiting for the semaphore to be available\n");
     sem_wait(read_sem);
+    sem_post(read_count);
     int current_readers = 0;
     sem_getvalue(read_count, &current_readers);
     if (current_readers == 1)
@@ -335,8 +336,8 @@ void *dfs_mainthread(void *arg)
 
     printf("[Secondary Server] Releasing the semaphore\n");
     sem_wait(read_sem);
+    sem_wait(read_count);
     sem_getvalue(read_count, &current_readers);
-    current_readers--;
     if (current_readers == 0)
         sem_post(rw_sem);
     sem_post(read_sem);
@@ -527,6 +528,7 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] Waiting for the semaphore to be available\n");
     sem_wait(read_sem);
     int current_readers = 0;
+    sem_post(read_count);
     sem_getvalue(read_count, &current_readers);
     if (current_readers == 1)
         sem_wait(rw_sem);
@@ -559,8 +561,8 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] Releasing the semaphore\n");
 
     sem_wait(read_sem);
+    sem_wait(read_count);
     sem_getvalue(read_count, &current_readers);
-    current_readers--;
     if (current_readers == 0)
         sem_post(rw_sem);
     sem_post(read_sem);
@@ -579,7 +581,6 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] BFS Main Thread: Number of nodes: %d\n", *dtt->number_of_nodes);
     printf("[Secondary Server] BFS Main Thread: Starting vertex: %d\n", starting_vertex);
 
-    // int currentVertex= dtt->current_vertex;
     // push starting vertex into queue
     enqueue((dtt->bfs_queue), dtt->current_vertex);
     // printf("Entry in queue is: %d", starting_vertex);
@@ -823,14 +824,6 @@ int main()
                             perror("[Secondary Server] Error joining thread");
                         }
                     }
-                }
-
-                // Send the cleanup message to the load balancer
-                msg.msg_type = LOAD_BALANCER_CHANNEL;
-                msg.data.operation = 7;
-                if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
-                {
-                    perror("[Secondary Server] Error while sending cleanup message to Load Balancer");
                 }
 
                 printf("[Secondary Server] Terminating...\n");

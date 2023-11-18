@@ -246,14 +246,6 @@ int main()
                     }
                 }
 
-                // Send the cleanup message to the load balancer
-                msg.msg_type = LOAD_BALANCER_CHANNEL;
-                msg.data.operation = 6;
-                if (msgsnd(msg_queue_id, &msg, sizeof(msg.data), 0) == -1)
-                {
-                    perror("[Primary Server] Error while sending cleanup message to Load Balancer");
-                }
-
                 printf("[Primary Server] Terminating...\n");
                 exit(EXIT_SUCCESS);
             }
