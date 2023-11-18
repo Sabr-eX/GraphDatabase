@@ -90,19 +90,23 @@ void cleanup(int msg_queue_id)
     {
         // Make sure the filename is null-terminated, and copy it to the 'filename' array
         snprintf(filename, sizeof(filename), "G%d.txt", i);
+
         // SEMAPHORE PART
         char sema_name_rw[256];
         snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
         char sema_name_read[256];
         snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+
         // If O_CREAT is specified, and a semaphore with the given name already exists,
         // then mode and value are ignored.
         sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
         sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+        sem_t *read_count = sem_open("Assignment_Read_Count", O_CREAT, 0644, 200);
 
         // Destroy the semaphores
         sem_close(rw_sem);
         sem_close(read_sem);
+        sem_close(read_count);
     }
     printf("[Load Balancer] Semaphores destroyed\n");
 
