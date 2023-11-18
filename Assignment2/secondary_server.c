@@ -49,8 +49,9 @@ struct msg_buffer
     struct data data;
 };
 
-// Code for queue
-// Queue structure
+/*
+ * Implementation of Queue
+ */
 struct Queue
 {
     int items[MAX_QUEUE_SIZE];
@@ -59,7 +60,6 @@ struct Queue
 };
 
 // Function to create an empty queue
-
 struct Queue *createQueue()
 {
     struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
@@ -180,6 +180,12 @@ struct data_to_thread
     struct Queue *bfs_queue;
 };
 
+/**
+ * @brief Called by the thread on creation. Every child spawns the thread and calls this function for DFA task.
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void *dfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -422,6 +428,12 @@ void *dfs_mainthread(void *arg)
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Called by the thread on creation. Every child spawns the thread and calls this function for BFS task.
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -453,6 +465,12 @@ void *bfs_subthread(void *arg)
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Called by the main thread of secondary server for BFS task. Uses the starting vertex from the shared memory and performs dfs.
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void *bfs_mainthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -623,6 +641,7 @@ void *bfs_mainthread(void *arg)
     {
         printf("[Secondary Server] BFS Main Thread: Error destroying mutexLock");
     }
+
     // Destroy queueLock
     if (pthread_mutex_destroy(dtt->queueLock) != 0)
     {
