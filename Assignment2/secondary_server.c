@@ -30,8 +30,6 @@
 #define MAX_VERTICES 100
 #define MAX_QUEUE_SIZE 100
 
-int current_readers = 0;
-
 /**
  * This structure, struct data, is used to store message data. It includes sequence numbers, operation codes, a graph name, and arrays for storing BFS sequence and its length.
  */
@@ -289,10 +287,12 @@ void *dfs_mainthread(void *arg)
     // then mode and value are ignored.
     sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
     sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+    sem_t *read_count = sem_open("Assignment_Read_Count", O_CREAT, 0644, 200);
 
     printf("[Secondary Server] Waiting for the semaphore to be available\n");
     sem_wait(read_sem);
-    current_readers++;
+    int current_readers = 0;
+    sem_getvalue(&read_count, &current_readers);
     if (current_readers == 1)
         sem_wait(rw_sem);
     sem_post(read_sem);
@@ -327,6 +327,7 @@ void *dfs_mainthread(void *arg)
     printf("[Secondary Server] Releasing the semaphore\n");
 
     sem_wait(read_sem);
+    sem_getvalue(&read_count, &current_readers);
     current_readers--;
     if (current_readers == 0)
         sem_post(rw_sem);
@@ -351,6 +352,7 @@ void *dfs_mainthread(void *arg)
     int threads[*dtt->number_of_nodes];
     int threadIndex = 0;
     int currentVertex = dtt->current_vertex;
+
     // flag variable to check if it's leaf or not
     int flag = 0;
     for (int i = 0; i < (*dtt->number_of_nodes); i++)
@@ -418,13 +420,14 @@ void *dfs_mainthread(void *arg)
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
-    // dtt->bfs_queue= createQueue();
+
     //  Lock
     pthread_mutex_lock(dtt->mutexLock);
     int node = dtt->current_vertex + 1;
     dtt->msg->data.graph_name[*dtt->index] = (char)node;
     *dtt->index = *dtt->index + 1;
     dtt->msg->data.graph_name[*dtt->index] = '*';
+
     // Unlock
     pthread_mutex_unlock(dtt->mutexLock);
     dtt->visited[dtt->current_vertex] = 1;
@@ -453,6 +456,7 @@ void *bfs_mainthread(void *arg)
     key_t shm_key;
     int shm_id;
     int *shmptr;
+
     // Generate key for the shared memory
     // Here, we are using the seq_num as the key because
     // we want to ensure that each request has a unique shared memory
@@ -486,14 +490,17 @@ void *bfs_mainthread(void *arg)
     snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
     char sema_name_read[256];
     snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+
     // If O_CREAT is specified, and a semaphore with the given name already exists,
     // then mode and value are ignored.
     sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
     sem_t *read_sem = sem_open(sema_name_read, O_CREAT, 0644, 1);
+    sem_t *read_count = sem_open("Assignment_Read_Count", O_CREAT, 0644, 200);
 
     printf("[Secondary Server] Waiting for the semaphore to be available\n");
     sem_wait(read_sem);
-    current_readers++;
+    int current_readers = 0;
+    sem_getvalue(&read_count, &current_readers);
     if (current_readers == 1)
         sem_wait(rw_sem);
     sem_post(read_sem);
@@ -525,6 +532,7 @@ void *bfs_mainthread(void *arg)
     printf("[Secondary Server] Releasing the semaphore\n");
 
     sem_wait(read_sem);
+    sem_getvalue(&read_count, &current_readers);
     current_readers--;
     if (current_readers == 0)
         sem_post(rw_sem);
@@ -676,7 +684,7 @@ int main()
                 dtt->index = (int *)malloc(sizeof(int));
                 *dtt->index = 0;
 
-                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
+                dtt->number_of_nodes = (int *)malloc(sizeof(int));
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
                 {
