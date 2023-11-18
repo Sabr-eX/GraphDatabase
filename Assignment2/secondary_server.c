@@ -57,6 +57,85 @@ struct Queue
     int rear;
 };
 
+// Code for queue
+// Function to create an empty queue
+
+struct Queue *createQueue() {
+    struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
+    if (queue == NULL) {
+        fprintf(stderr, "Memory allocation failed. Exiting program.\n");
+        exit(EXIT_FAILURE);
+    }
+    queue->front = -1;
+    queue->rear = -1;
+    return queue;
+}
+
+int isEmpty(struct Queue *q) {
+    return q->front == -1;
+}
+
+int isFull(struct Queue *q) {
+    return q->rear == MAX_QUEUE_SIZE - 1;
+}
+
+void enqueue(struct Queue *q, int value) {
+    if (isFull(q)) {
+        printf("Queue is full. Cannot enqueue.\n");
+        return;
+    }
+
+    if (isEmpty(q)) {
+        q->front = 0;
+    }
+
+    q->rear++;
+    q->items[q->rear] = value;
+    printf("Enqueued: %d\n", value);
+}
+
+int dequeue(struct Queue *q) {
+    int value;
+
+    if (isEmpty(q)) {
+        printf("Queue is empty. Cannot dequeue.\n");
+        return -1;
+    }
+
+    value = q->items[q->front];
+
+    if (q->front == q->rear) {
+        q->front = q->rear = -1;
+    } else {
+        q->front++;
+    }
+
+    printf("Dequeued: %d\n", value);
+    return value;
+}
+
+void display(struct Queue *q) {
+    if (isEmpty(q)) {
+        printf("Queue is empty.\n");
+        return;
+    }
+
+    printf("Queue elements: ");
+    for (int i = q->front; i <= q->rear; i++) {
+        printf("%d ", q->items[i]);
+    }
+    printf("\n");
+}
+
+int queueSize(struct Queue *q) {
+    if (isEmpty(q)) {
+        return 0;
+    } else {
+        return q->rear - q->front + 1;
+    }
+}
+
+
 /**
  * Used to pass data to threads for BFS and dfs processing.
  * It includes a message queue ID and a message buffer.
@@ -79,111 +158,6 @@ struct data_to_thread
     int current_vertex;
     struct Queue *bfs_queue;
 };
-
-// Code for queue
-// Function to create an empty queue
-struct Queue *createQueue()
-{
-    struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
-    queue->front = -1;
-    queue->rear = -1;
-    return queue;
-}
-
-// Function to check if the queue is empty
-int isEmpty(struct Queue *queue)
-{
-    return queue->front == -1;
-}
-
-// Function to check if the queue is full
-int isFull(struct Queue *queue)
-{
-    return queue->rear == MAX_QUEUE_SIZE - 1;
-}
-
-// Function to enqueue an item to the queue
-void enqueue(struct Queue *queue, int value)
-{
-    if (isFull(queue))
-    {
-        printf("Queue is full. Cannot enqueue %d.\n", value);
-        return;
-    }
-
-    if (isEmpty(queue))
-    {
-        queue->front = 0;
-    }
-
-    queue->rear++;
-    queue->items[queue->rear] = value;
-    printf("Enqueued %d to the queue.\n", value);
-}
-
-// Function to dequeue an item from the queue
-int dequeue(struct Queue *queue)
-{
-    int item;
-
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty. Cannot dequeue.\n");
-        return -1;
-    }
-
-    item = queue->items[queue->front];
-    queue->front++;
-
-    if (queue->front > queue->rear)
-    {
-        // Reset the queue after all elements are dequeued
-        queue->front = queue->rear = -1;
-    }
-
-    printf("Dequeued %d from the queue.\n", item);
-    return item;
-}
-
-// Function to get the front item of the queue without removing it
-int front(struct Queue *queue)
-{
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty.\n");
-        return -1;
-    }
-
-    return queue->items[queue->front];
-}
-
-int queueSize(struct Queue *queue)
-{
-    if (isEmpty(queue))
-    {
-        return 0;
-    }
-    else
-        return queue->rear - queue->front + 1;
-}
-
-// Function to print the elements of the queue
-void display(struct Queue *queue)
-{
-    int i;
-    if (isEmpty(queue))
-    {
-        printf("Queue is empty.\n");
-        return;
-    }
-
-    printf("Queue elements: ");
-    for (i = queue->front; i <= queue->rear; i++)
-    {
-        printf("%d ", queue->items[i]);
-    }
-    printf("\n");
-}
 
 void *dfs_subthread(void *arg)
 {
@@ -235,6 +209,8 @@ void *dfs_subthread(void *arg)
     printf("[Secondary Server] DFS Thread: Exiting DFS Thread\n");
     pthread_exit(NULL);
 }
+
+
 
 /**
  * @brief Will be called by the main thread of the secondary server to perform DFS
@@ -389,6 +365,7 @@ void *dfs_mainthread(void *arg)
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
+    //dtt->bfs_queue= createQueue();
     // Lock
     pthread_mutex_lock(dtt->mutexLock);
     dtt->msg->data.graph_name[*dtt->index] = dtt->current_vertex;
@@ -482,19 +459,20 @@ void *bfs_mainthread(void *arg)
 
     // int currentVertex= dtt->current_vertex;
     // push starting vertex into queue
+    //dtt->bfs_queue= createQueue();
     enqueue((dtt->bfs_queue), starting_vertex);
     // printf("Entry in queue is: %d", starting_vertex);
-
+    int entry = 0;
     while (!isEmpty((dtt->bfs_queue)))
     {
-
+	
         int queue_size = queueSize((dtt->bfs_queue));
         printf("Queue size: %d\n", queue_size);
         int array[queue_size];
-
         // Copy entries into array, empty queue
-        int entry = 0;
+        
         array[entry++] = dequeue((dtt->bfs_queue));
+     
 
         pthread_t subthread_ids[queue_size];
         int threads[queue_size];
@@ -505,17 +483,20 @@ void *bfs_mainthread(void *arg)
             struct data_to_thread *newdtt = malloc(sizeof(struct data_to_thread));
             *newdtt = *dtt;
             newdtt->current_vertex = array[i];
-            pthread_create(&subthread_ids[i], NULL, bfs_subthread, (void *)dtt);
+            pthread_create(&subthread_ids[i], NULL, bfs_subthread, (void *)newdtt);
             printf("This loop is being entered\n");
             threads[threadIndex++] = i;
+            //free(newdtt);
         }
 
         // Join all the subthreads
-        for (int i = 0; i < threadIndex; i++)
-        {
+         for (int i = 0; i < threadIndex; i++)
+         {
             pthread_join(subthread_ids[threads[i]], NULL);
-        }
-    }
+         }
+     }
+     
+    
 
     // dtt->msg->data.graph_name[++(*dtt->index)] = '\0';
     // Sending shit to client
@@ -647,6 +628,7 @@ int main()
                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 dtt->bfs_queue = (struct Queue *)malloc(sizeof(struct Queue));
+                dtt->bfs_queue= createQueue();
 
                 *dtt->msg_queue_id = msg_queue_id;
                 dtt->msg = &msg;
