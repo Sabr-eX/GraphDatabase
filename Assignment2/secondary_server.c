@@ -264,6 +264,7 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] DFS Main Thread: Error occurred while connecting to shm\n");
         exit(EXIT_FAILURE);
     }
+
     // Attach to the shared memory
     if ((shmptr = (int *)shmat(shm_id, NULL, 0)) == (void *)-1)
     {
@@ -278,11 +279,13 @@ void *dfs_mainthread(void *arg)
     char filename[250];
     // Make sure the filename is null-terminated, and copy it to the 'filename' array
     snprintf(filename, sizeof(filename), "%s", dtt->msg->data.graph_name);
+
     // SEMAPHORE PART
     char sema_name_rw[256];
     snprintf(sema_name_rw, sizeof(sema_name_rw), "rw_%s", filename);
     char sema_name_read[256];
     snprintf(sema_name_read, sizeof(sema_name_read), "read_%s", filename);
+
     // If O_CREAT is specified, and a semaphore with the given name already exists,
     // then mode and value are ignored.
     sem_t *rw_sem = sem_open(sema_name_rw, O_CREAT, 0644, 1);
@@ -325,7 +328,6 @@ void *dfs_mainthread(void *arg)
     }
 
     printf("[Secondary Server] Releasing the semaphore\n");
-
     sem_wait(read_sem);
     sem_getvalue(&read_count, &current_readers);
     current_readers--;
@@ -409,13 +411,16 @@ void *dfs_mainthread(void *arg)
         perror("[Secondary Server] DFS Main Thread: Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
+
     printf("[Secondary Server] DFS Main Thread: Freeing dtt\n");
     free(dtt);
+
     // Destroy mutexLock
     if (pthread_mutex_destroy(dtt->mutexLock) != 0)
     {
         printf("[Secondary Server] BFS Main Thread: Error destroying mutexLock");
     }
+
     // Exit the DFS thread
     printf("[Secondary Server] DFS Main Thread: Exiting DFS Request\n");
     printf("[Secondary Server] Successfully Completed Operation 3\n");
@@ -551,6 +556,7 @@ void *bfs_mainthread(void *arg)
 
     int starting_vertex = dtt->current_vertex + 1;
     dtt->visited[dtt->current_vertex] = 1;
+
     // Debugging
     printf("[Secondary Server] BFS Main Thread: Adjacency Matrix Read Successfully\n");
     printf("[Secondary Server] BFS Main Thread: Number of nodes: %d\n", *dtt->number_of_nodes);
@@ -558,7 +564,6 @@ void *bfs_mainthread(void *arg)
 
     // int currentVertex= dtt->current_vertex;
     // push starting vertex into queue
-    // dtt->bfs_queue= createQueue();
     enqueue((dtt->bfs_queue), dtt->current_vertex);
     // printf("Entry in queue is: %d", starting_vertex);
 
@@ -568,8 +573,8 @@ void *bfs_mainthread(void *arg)
         int queue_size = queueSize((dtt->bfs_queue));
         printf("Queue size: %d\n", queue_size);
         int array[queue_size];
-        // Copy entries into array, empty queue
 
+        // Copy entries into array, empty queue
         while (!isEmpty(dtt->bfs_queue))
         {
             array[entry++] = dequeue((dtt->bfs_queue));
@@ -586,7 +591,6 @@ void *bfs_mainthread(void *arg)
             newdtt->current_vertex = array[i];
             pthread_create(&subthread_ids[i], NULL, bfs_subthread, (void *)newdtt);
             threads[threadIndex++] = i;
-            // free(newdtt);
         }
 
         // Join all the subthreads
@@ -596,7 +600,8 @@ void *bfs_mainthread(void *arg)
         }
     }
 
-    // dtt->msg->data.graph_name[++(*dtt->index)] = '\0';
+    dtt->msg->data.graph_name[++(*dtt->index)] = '\0';
+
     // Sending shit to client
     dtt->msg->msg_type = dtt->msg->data.seq_num;
     dtt->msg->data.operation = 0;
@@ -615,6 +620,8 @@ void *bfs_mainthread(void *arg)
         perror("[Secondary Server] BFS Main Thread: Could not detach from shared memory\n");
         exit(EXIT_FAILURE);
     }
+
+    // Free the structs
     printf("[Secondary Server] BFS Main Thread: Freeing dtt\n");
     free(dtt);
 
@@ -623,6 +630,7 @@ void *bfs_mainthread(void *arg)
     {
         printf("[Secondary Server] BFS Main Thread: Error destroying mutexLock");
     }
+
     // Destroy queueLock
     if (pthread_mutex_destroy(dtt->queueLock) != 0)
     {
@@ -699,8 +707,8 @@ int main()
                 dtt->msg = (struct msg_buffer *)malloc(sizeof(struct msg_buffer));
                 dtt->index = (int *)malloc(sizeof(int));
                 *dtt->index = 0;
-
                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
+
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
                 {
@@ -742,18 +750,21 @@ int main()
                 dtt->index = (int *)malloc(sizeof(int));
                 *dtt->index = 0;
                 dtt->number_of_nodes = (int *)malloc(sizeof(int));
+
                 dtt->mutexLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 if (pthread_mutex_init(dtt->mutexLock, NULL) != 0)
                 {
                     perror("[Secondary Server] Error initializing mutexLock");
                     exit(EXIT_FAILURE);
                 }
+
                 dtt->queueLock = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
                 if (pthread_mutex_init(dtt->queueLock, NULL) != 0)
                 {
                     perror("[Secondary Server] Error initializing queueLock");
                     exit(EXIT_FAILURE);
                 }
+
                 dtt->bfs_queue = createQueue();
 
                 *dtt->msg_queue_id = msg_queue_id;
