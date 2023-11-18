@@ -182,9 +182,9 @@ struct data_to_thread
 
 /**
  * @brief Called by the thread on creation. Every child spawns the thread and calls this function for DFA task.
- * 
- * @param arg 
- * @return void* 
+ *
+ * @param arg
+ * @return void*
  */
 void *dfs_subthread(void *arg)
 {
@@ -332,7 +332,7 @@ void *dfs_mainthread(void *arg)
         }
         fclose(fptr);
     }
-    sleep(3);
+
     printf("[Secondary Server] Releasing the semaphore\n");
     sem_wait(read_sem);
     sem_getvalue(read_count, &current_readers);
@@ -435,9 +435,9 @@ void *dfs_mainthread(void *arg)
 
 /**
  * @brief Called by the thread on creation. Every child spawns the thread and calls this function for BFS task.
- * 
- * @param arg 
- * @return void* 
+ *
+ * @param arg
+ * @return void*
  */
 void *bfs_subthread(void *arg)
 {
@@ -472,9 +472,9 @@ void *bfs_subthread(void *arg)
 
 /**
  * @brief Called by the main thread of secondary server for BFS task. Uses the starting vertex from the shared memory and performs dfs.
- * 
- * @param arg 
- * @return void* 
+ *
+ * @param arg
+ * @return void*
  */
 void *bfs_mainthread(void *arg)
 {
@@ -815,7 +815,7 @@ int main()
                 // Operation code for cleanup
                 for (int i = 0; i < threadIndex; i++)
                 {
-                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    // printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[threads[i]] != 0)
                     {
                         if (pthread_join(thread_ids[threads[i]], NULL) != 0)
