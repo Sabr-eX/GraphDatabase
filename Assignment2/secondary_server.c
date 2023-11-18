@@ -49,8 +49,9 @@ struct msg_buffer
     struct data data;
 };
 
-// Code for queue
-// Queue structure
+/*
+ * Implementation of Queue
+ */
 struct Queue
 {
     int items[MAX_QUEUE_SIZE];
@@ -59,7 +60,6 @@ struct Queue
 };
 
 // Function to create an empty queue
-
 struct Queue *createQueue()
 {
     struct Queue *queue = (struct Queue *)malloc(sizeof(struct Queue));
@@ -180,6 +180,12 @@ struct data_to_thread
     struct Queue *bfs_queue;
 };
 
+/**
+ * @brief Called by the thread on creation. Every child spawns the thread and calls this function for DFA task.
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void *dfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -427,6 +433,12 @@ void *dfs_mainthread(void *arg)
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Called by the thread on creation. Every child spawns the thread and calls this function for BFS task.
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void *bfs_subthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -458,6 +470,12 @@ void *bfs_subthread(void *arg)
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Called by the main thread of secondary server for BFS task. Uses the starting vertex from the shared memory and performs dfs.
+ * 
+ * @param arg 
+ * @return void* 
+ */
 void *bfs_mainthread(void *arg)
 {
     struct data_to_thread *dtt = (struct data_to_thread *)arg;
@@ -670,6 +688,8 @@ int main()
 
     // Store the thread_ids thread
     pthread_t thread_ids[200];
+    int threads[200];
+    int threadIndex = 0;
 
     int channel;
     printf("[Secondary Server] Enter the channel number: ");
@@ -684,7 +704,6 @@ int main()
     }
 
     printf("[Secondary Server] Using Channel: %d\n", channel);
-    int thread_counter = 0;
     // Listen to the message queue for new requests from the clients
     while (1)
     {
@@ -739,7 +758,7 @@ int main()
                     perror("[Secondary Server] Error in DFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-                thread_counter++;
+                threads[threadIndex++] = msg.data.seq_num;
             }
             else if (msg.data.operation == 4)
             {
@@ -790,14 +809,14 @@ int main()
                     perror("[Secondary Server] Error in BFS thread creation");
                     exit(EXIT_FAILURE);
                 }
-                thread_counter++;
+                threads[threadIndex++] = msg.data.seq_num;
             }
             else if (msg.data.operation == 5)
             {
                 // Operation code for cleanup
-                for (int i = 1; i <= thread_counter; i++)
+                for (int i = 0; i < threadIndex; i++)
                 {
-                    printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
+                    //printf("Attempting to Clean: %d %lu\n", i, thread_ids[i]);
                     if (thread_ids[i] != 0)
                     {
                         if (pthread_join(thread_ids[i], NULL) != 0)
