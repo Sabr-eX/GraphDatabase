@@ -1,5 +1,7 @@
 # ClientServer_CSF372 - Client Server Architecture in C Language
 
+This readme works more from the assignment 2 POV rather than from an assignment 1 POV. Assignment 1 was pretty simple and it's documentation is present in the Assignment 1 folder.
+
 # Base Data Structure
 
 ```c
@@ -41,8 +43,6 @@ struct Queue
     int rear;
 };
 
-
-
 /**
  * Used to pass data to threads for BFS and dfs processing.
  * It includes a message queue ID and a message buffer.
@@ -80,56 +80,56 @@ struct data_to_thread
 
 # Task 1: Add a new graph to the Database
 
--   [ ] Create client so that the user can choose the sequence, operation, graph file name
--   [ ] Check that these requests are going to the load balancer and are redirected to the primary server on the loadbalancer and primaryserver channels respectively
--   [ ] Write basic code to check that the primary server receives everything
--   [ ] Store this in shared memory in a way that it doesn't clash with other shared memories
--   [ ] Delete this stored memory after the request is completed
--   [ ] The primary server's thread should be able to read this data and you should also keep track of threads so as to ensure that we wait for them before the main thread terminates
--   [ ] And send this data to the new text file
--   [ ] After this send a message back to the client that `File successfully added`
--   [ ] Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
--   [ ] The parent thread should wait for the children threads to terminate
+-   Create client so that the user can choose the sequence, operation, graph file name
+-   Check that these requests are going to the load balancer and are redirected to the primary server on the loadbalancer and primaryserver channels respectively
+-   Write basic code to check that the primary server receives everything
+-   Store this in shared memory in a way that it doesn't clash with other shared memories
+-   Delete this stored memory after the request is completed
+-   The primary server's thread should be able to read this data and you should also keep track of threads so as to ensure that we wait for them before the main thread terminates
+-   And send this data to the new text file
+-   After this send a message back to the client that `File successfully added`
+-   Ensure that concurrency is managed properly which otherwise can cause read-write dependencies
+-   The parent thread should wait for the children threads to terminate
 
 # Task 2: Modifying existing graph
 
--   [ ] Client can request add/delete nodes/edges, so we need to perform write operation for this.
--   [ ] Primary server
-    -   [ ] Takes this request
-    -   [ ] Creates a new thread
-    -   [ ] Reads the contents of shared memory
-    -   [ ] Opens the corresponding file
-    -   [ ] Updates the file
-    -   [ ] Closes the file
-    -   [ ] Thread sends `File successfully modified`
--   [ ] Client display the message on console
+-   Client can request add/delete nodes/edges, so we need to perform write operation for this.
+-   Primary server
+    -   Takes this request
+    -   Creates a new thread
+    -   Reads the contents of shared memory
+    -   Opens the corresponding file
+    -   Updates the file
+    -   Closes the file
+    -   Thread sends `File successfully modified`
+-   Client display the message on console
 
 # Task 3: BFS of the input graph
 
 1. Create client. The user chooses sequence, operation, (graph file name is the same).
 2. Secondary Server Tasks
-    - [ ] Receive request from load balancer (nodes, adj matrix via message queue)
-    - [ ] Spawn new thread to handle request
-    - [ ] Receive starting vertex via shared memory segment
-    - [ ] Ensure requests are redirected to the appropriate server
-    - [ ] Error handling to ensure input is in right format
-    - [ ] For each level, perform BFS by creating a new thread for processing the nodes of a particular level. Process nodes concurrently
-    - [ ] Ensure parents wait for child threads to terminate
-    - [ ] Check other error handling
-    - [ ] Return order of vertices traversed via message queue
+   -Receive request from load balancer (nodes, adj matrix via message queue)
+   -Spawn new thread to handle request
+   -Receive starting vertex via shared memory segment
+   -Ensure requests are redirected to the appropriate server
+   -Error handling to ensure input is in right format
+   -For each level, perform BFS by creating a new thread for processing the nodes of a particular level. Process nodes concurrently
+   -Ensure parents wait for child threads to terminate
+   -Check other error handling
+   -Return order of vertices traversed via message queue
 
 # Task 4: DFS of the input graph
 
 1. The user chooses Sequence_Number, Operation_Number and Graph_File_Name.
 2. Secondary Server Tasks
-    - [ ] Receive request from load balancer (nodes, adj matrix via message queue)
-    - [ ] Spawn new thread to handle request
-    - [ ] Receive starting vertex via shared memory segment
-    - [ ] Error handling to ensure input is in right format
-    - [ ] For each unvisited node adjacent to the current node, perform DFS by creating a new thread for processing the nodes of each usique path from this node. Process all paths concurrently
-    - [ ] Ensure parents wait for child threads to terminate
-    - [ ] Check other error handling
-    - [ ] Return all the leaf nodes
+   -Receive request from load balancer (nodes, adj matrix via message queue)
+   -Spawn new thread to handle request
+   -Receive starting vertex via shared memory segment
+   -Error handling to ensure input is in right format
+   -For each unvisited node adjacent to the current node, perform DFS by creating a new thread for processing the nodes of each usique path from this node. Process all paths concurrently
+   -Ensure parents wait for child threads to terminate
+   -Check other error handling
+   -Return all the leaf nodes
 
 # Cleanup
 
