@@ -108,15 +108,15 @@ struct data_to_thread
 
 1. Create client. The user chooses sequence, operation, (graph file name is the same).
 2. Secondary Server Tasks
-    - [] Receive request from load balancer (nodes, adj matrix via message queue)
-    - [] Spawn new thread to handle request
-    - [] Receive starting vertex via shared memory segment
-    - [] Ensure requests are redirected to the appropriate server
-    - [] Error handling to ensure input is in right format
-    - [] For each level, perform BFS by creating a new thread for processing the nodes of a particular level. Process nodes concurrently
-    - [] Ensure parents wait for child threads to terminate
-    - [] Check other error handling
-    - [] Return order of vertices traversed via message queue
+    - [ ] Receive request from load balancer (nodes, adj matrix via message queue)
+    - [ ] Spawn new thread to handle request
+    - [ ] Receive starting vertex via shared memory segment
+    - [ ] Ensure requests are redirected to the appropriate server
+    - [ ] Error handling to ensure input is in right format
+    - [ ] For each level, perform BFS by creating a new thread for processing the nodes of a particular level. Process nodes concurrently
+    - [ ] Ensure parents wait for child threads to terminate
+    - [ ] Check other error handling
+    - [ ] Return order of vertices traversed via message queue
 
 # Task 4: DFS of the input graph
 
