@@ -1,4 +1,4 @@
-# ClientServer_CSF372 - Client Server Architecture in C Language
+# Client Server Architecture for a Graph Database in C Language
 
 This readme works more from the assignment 2 POV rather than from an assignment 1 POV. Assignment 1 was pretty simple and it's documentation is present in the Assignment 1 folder.
 
@@ -70,7 +70,7 @@ struct data_to_thread
 };
 ```
 
-# Base Tasks
+# Tasks
 
 -   client.c -> sends requests to the load balancer through the load balancer channel
 -   load_balancer.c - receives requests through load balancer channel and sends it to primary or secondary server channels
